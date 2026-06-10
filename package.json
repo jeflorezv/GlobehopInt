@@ -1,0 +1,22 @@
+{
+  "name": "globehop-instagram-automation",
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/webhook.js",
+    "setup": "node scripts/setup-airtable.js",
+    "test:generate": "node scripts/test-generate.js",
+    "test:post": "node scripts/test-post.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "@sendgrid/mail": "^8.1.0",
+    "airtable": "^0.12.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "sharp": "^0.33.4"
+  }
+}
