@@ -45,6 +45,9 @@ const TABLE_FIELDS = [
   { name: 'Slides JSON',         type: 'multilineText' },
   { name: 'URL Video',           type: 'url' },
   { name: 'Descripción visual',  type: 'singleLineText' },
+  { name: 'Hook',                 type: 'multilineText' },
+  { name: 'URL imagen branded',  type: 'url' },
+  { name: 'Imagen preview',      type: 'multipleAttachments' },
   { name: 'Paso completado',     type: 'singleLineText' },
   { name: 'URL post publicado',  type: 'url' },
   { name: 'Notas',               type: 'multilineText' },
@@ -80,8 +83,11 @@ async function ensureTable() {
   if (!resp.ok) throw new Error(`Failed to list tables: ${await resp.text()}`);
 
   const { tables } = await resp.json();
-  if (tables.some(t => t.name === TABLE_NAME)) {
-    console.log(`✓ Table "${TABLE_NAME}" already exists — skipping creation`);
+  const existing = tables.find(t => t.name === TABLE_NAME);
+
+  if (existing) {
+    console.log(`✓ Table "${TABLE_NAME}" already exists — checking for missing fields`);
+    await addMissingFields(existing.id, existing.fields);
     return;
   }
 
@@ -93,6 +99,28 @@ async function ensureTable() {
 
   if (!create.ok) throw new Error(`Failed to create table: ${await create.text()}`);
   console.log(`✓ Table "${TABLE_NAME}" created`);
+}
+
+async function addMissingFields(tableId, existingFields) {
+  const existingNames = new Set(existingFields.map(f => f.name));
+  const missing = TABLE_FIELDS.filter(f => !existingNames.has(f.name));
+
+  if (!missing.length) {
+    console.log('  All fields present');
+    return;
+  }
+
+  for (const field of missing) {
+    const resp = await fetch(
+      `https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables/${tableId}/fields`,
+      { method: 'POST', headers: HEADERS, body: JSON.stringify(field) },
+    );
+    if (!resp.ok) {
+      console.warn(`  ⚠ Could not add field "${field.name}": ${await resp.text()}`);
+    } else {
+      console.log(`  + Added field "${field.name}"`);
+    }
+  }
 }
 
 async function seedCalendar() {

@@ -99,6 +99,76 @@ app.get('/retry/:recordId', requireSecret, async (req, res) => {
   }
 });
 
+app.get('/review/:recordId', requireSecret, async (req, res) => {
+  const { recordId } = req.params;
+
+  try {
+    const record   = await fetchRecord(recordId);
+    const imageUrl = record['URL imagen branded'] ?? record['URL imagen'];
+    const caption  = record['Caption generado'] ?? '';
+    const hook     = record['Hook'] ?? '';
+    const estado   = record['Estado'] ?? '';
+    const fecha    = record['Fecha publicación'] ?? '';
+    const tipo     = record['Tipo de post'] ?? '';
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(reviewHtml({ recordId, imageUrl, caption, hook, estado, fecha, tipo }));
+  } catch (err) {
+    res.status(500).send(`<pre style="padding:24px;font-family:monospace">Error: ${escHtml(err.message)}</pre>`);
+  }
+});
+
+function reviewHtml({ recordId, imageUrl, caption, hook, estado, fecha, tipo }) {
+  const estadoClass = estado === 'Aprobado' ? 'aprobado' : estado === 'Pendiente revisión' ? 'pendiente' : '';
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GlobeHop — ${escHtml(recordId)}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f0f0f;color:#f0f0f0;padding:24px 16px}
+    .wrap{max-width:520px;margin:0 auto}
+    .meta{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+    .badge{background:#1e1e1e;border:1px solid #333;padding:3px 10px;border-radius:20px;font-size:12px;color:#aaa}
+    .badge.aprobado{border-color:#22c55e;color:#22c55e}
+    .badge.pendiente{border-color:#f59e0b;color:#f59e0b}
+    .img-wrap{position:relative;border-radius:12px;overflow:hidden;margin-bottom:20px;background:#1a1a1a}
+    .img-wrap img{display:block;width:100%}
+    .img-wrap a{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,.65);color:#fff;font-size:12px;padding:4px 10px;border-radius:6px;text-decoration:none;backdrop-filter:blur(4px)}
+    .hook{background:#141428;border-left:3px solid #44539D;padding:12px 16px;border-radius:0 8px 8px 0;margin-bottom:16px;font-size:15px;font-weight:600;line-height:1.5;white-space:pre-line}
+    .caption{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:16px;font-size:14px;line-height:1.75;white-space:pre-wrap;word-break:break-word}
+    .id{margin-top:20px;font-size:11px;color:#444;text-align:center}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="meta">
+    <span class="badge">${escHtml(tipo)}</span>
+    <span class="badge">${escHtml(fecha)}</span>
+    <span class="badge ${estadoClass}">${escHtml(estado)}</span>
+  </div>
+  ${imageUrl
+    ? `<div class="img-wrap"><img src="${escHtml(imageUrl)}" alt="Post preview" loading="eager"><a href="${escHtml(imageUrl)}" target="_blank" rel="noopener">Ver completa ↗</a></div>`
+    : `<p style="color:#555;margin-bottom:20px;font-size:14px">Sin imagen</p>`
+  }
+  ${hook ? `<div class="hook">${escHtml(hook)}</div>` : ''}
+  <div class="caption">${escHtml(caption)}</div>
+  <p class="id">${escHtml(recordId)}</p>
+</div>
+</body>
+</html>`;
+}
+
+function escHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 app.get('/images/:filename', (req, res) => {
   const { filename } = req.params;
 

@@ -156,11 +156,19 @@ async function persistStep(stepName, tipo, recordId, ctx) {
 
     case 'brand': {
       if (tipo === 'carousel') {
-        return saveStep(recordId, 'brand', { 'Slides JSON': JSON.stringify(ctx.slides) });
+        const previewUrl = ctx.slides[0]?.imageUrl;
+        return saveStep(recordId, 'brand', {
+          'Slides JSON':    JSON.stringify(ctx.slides),
+          ...(previewUrl ? { 'Imagen preview': [{ url: previewUrl }] } : {}),
+        });
       }
       // Save branded URL to a dedicated field so resume can distinguish
       // pre-brand (raw Ideogram URL) from post-brand (Railway URL).
-      return saveStep(recordId, 'brand', { 'URL imagen branded': ctx.imageUrl });
+      // The attachment field lets reviewers see the image inline in Airtable.
+      return saveStep(recordId, 'brand', {
+        'URL imagen branded': ctx.imageUrl,
+        'Imagen preview':     [{ url: ctx.imageUrl }],
+      });
     }
 
     case 'video':
