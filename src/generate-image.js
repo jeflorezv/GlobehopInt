@@ -4,7 +4,7 @@ const IDEOGRAM_URL = 'https://api.ideogram.ai/generate';
 
 // Ideogram aspect ratio tokens per post type
 const ASPECT_RATIO = {
-  single_photo: 'ASPECT_2_3',
+  single_photo: 'ASPECT_4_5',
   reel:         'ASPECT_9_16',
 };
 

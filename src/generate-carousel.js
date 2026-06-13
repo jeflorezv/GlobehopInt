@@ -167,7 +167,7 @@ async function generateSlideImage(visualPrompt) {
       body: JSON.stringify({
         image_request: {
           prompt:              visualPrompt,
-          aspect_ratio:        'ASPECT_2_3',
+          aspect_ratio:        'ASPECT_4_5',
           model:               'V_2',
           magic_prompt_option: 'OFF',
         },
