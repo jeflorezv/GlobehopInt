@@ -3,6 +3,7 @@ import { generateImage }    from './generate-image.js';
 import { generateCarousel } from './generate-carousel.js';
 import { generateReel }     from './generate-reel.js';
 import { applyBrand }       from './apply-brand.js';
+import { humanizeCaption }  from './humanize-caption.js';
 import {
   fetchRecord,
   saveStep,
@@ -12,9 +13,9 @@ import { sendErrorAlert } from './send-alert.js';
 
 // Same step sequence for all types; carousel swaps executors at caption + image.
 const STEPS = {
-  single_photo: ['caption', 'image', 'brand', 'save'],
-  carousel:     ['caption', 'image', 'brand', 'save'],
-  reel:         ['caption', 'image', 'brand', 'video', 'save'],
+  single_photo: ['caption', 'humanize', 'image', 'brand', 'save'],
+  carousel:     ['caption', 'humanize', 'image', 'brand', 'save'],
+  reel:         ['caption', 'humanize', 'image', 'brand', 'video', 'save'],
 };
 
 /**
@@ -81,6 +82,9 @@ async function runStep(stepName, tipo, record, ctx) {
         ? generateCarousel(record, ctx)
         : generateContent(record, ctx);
 
+    case 'humanize':
+      return humanizeCaption(record, ctx);
+
     case 'image':
       // Carousel already has slide images from the caption step — pass through
       if (tipo === 'carousel') return ctx;
@@ -140,6 +144,9 @@ async function persistStep(stepName, tipo, recordId, ctx) {
             'Descripción visual': ctx.visual,
             'Hook':               ctx.hook ?? '',
           });
+
+    case 'humanize':
+      return saveStep(recordId, 'humanize', { 'Caption generado': ctx.caption });
 
     case 'image':
       // Carousel: images were saved with caption; just advance Paso completado

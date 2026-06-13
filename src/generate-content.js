@@ -80,6 +80,7 @@ Line 9: Blank
 Hashtags
 
 Rules:
+- NEVER write audience segment labels (adultos, universitarios, profesionales, padres, estudiantes_secundaria) in the caption copy. These are internal targeting labels — they never appear in published text. Address the reader directly with "tú".
 - Use emojis purposefully: 1–2 in hook, emoji bullets in polls, 1 flag emoji for the destination
 - Each non-hashtag paragraph is max 2 lines
 - EVERY caption MUST end with a clear, specific call to action before the hashtags — no exceptions.
