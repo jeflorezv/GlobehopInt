@@ -12,8 +12,6 @@ const PORT = process.env.PORT ?? 3000;
 
 app.use(express.json());
 
-const deletionTimers = new Map();
-
 function requireSecret(req, res, next) {
   const provided = req.headers['x-webhook-secret'] ?? req.query.secret;
   if (!provided || provided !== process.env.WEBHOOK_SECRET) {
@@ -64,6 +62,15 @@ app.post('/publish', requireSecret, async (req, res) => {
     await markPublished(recordId, postUrl);
     await sendPublishConfirmation({ recordId, tipo, postUrl }).catch(() => {});
 
+    // Clean up branded image from /tmp after successful publish
+    const imageUrl = record['URL imagen'];
+    if (imageUrl) {
+      const filename = imageUrl.split('/images/').pop();
+      if (filename?.match(/^branded-[\w-]+\.jpg$/)) {
+        fs.unlink(path.join('/tmp', filename), () => {});
+      }
+    }
+
     res.json({ ok: true, postUrl });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -93,14 +100,6 @@ app.get('/images/:filename', (req, res) => {
 
   res.sendFile(filePath, err => {
     if (err && !res.headersSent) return res.status(404).end();
-
-    if (!deletionTimers.has(filename)) {
-      const timer = setTimeout(() => {
-        fs.unlink(filePath, () => {});
-        deletionTimers.delete(filename);
-      }, 10 * 60 * 1000);
-      deletionTimers.set(filename, timer);
-    }
   });
 });
 
