@@ -88,9 +88,11 @@ async function createChildContainer(imageUrl) {
 
 async function waitForContainer(containerId, timeoutMs = 90_000, intervalMs = 4_000) {
   const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const params = new URLSearchParams({ fields: 'status_code', access_token: TOKEN() });
-    const resp   = await fetch(`${BASE}/${containerId}?${params}`);
+  while (true) {
+    const params = new URLSearchParams({ fields: 'status_code' });
+    const resp   = await fetch(`${BASE}/${containerId}?${params}`, {
+      headers: { Authorization: `Bearer ${TOKEN()}` },
+    });
     if (resp.ok) {
       const { status_code } = await resp.json();
       if (status_code === 'FINISHED') return;
@@ -98,6 +100,7 @@ async function waitForContainer(containerId, timeoutMs = 90_000, intervalMs = 4_
         throw new Error(`post-to-instagram: container ${containerId} status: ${status_code}`);
       }
     }
+    if (Date.now() >= deadline) break;
     await new Promise(r => setTimeout(r, intervalMs));
   }
   throw new Error(`post-to-instagram: container ${containerId} did not finish within ${timeoutMs / 1000}s`);
@@ -125,11 +128,10 @@ async function graphPost(path, body) {
 
 async function getPermalink(mediaId) {
   return withRetry(async () => {
-    const params = new URLSearchParams({
-      fields:       'permalink',
-      access_token: TOKEN(),
+    const params = new URLSearchParams({ fields: 'permalink' });
+    const resp   = await fetch(`${BASE}/${mediaId}?${params}`, {
+      headers: { Authorization: `Bearer ${TOKEN()}` },
     });
-    const resp = await fetch(`${BASE}/${mediaId}?${params}`);
 
     if (!resp.ok) {
       const data = await resp.json().catch(() => ({}));

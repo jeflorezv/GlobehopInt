@@ -59,14 +59,15 @@ async function submitTask(imageUrl, visualPrompt) {
 
     if (!resp.ok) {
       const body = await resp.text();
-      const err  = new Error(`Kling submit ${resp.status}: ${body}`);
+      console.error(`[generate-reel] Kling submit ${resp.status} body:`, body);
+      const err  = new Error(`Kling submit failed (HTTP ${resp.status})`);
       err.status = resp.status;
       throw err;
     }
 
     const json   = await resp.json();
     const taskId = json?.data?.task_id;
-    if (!taskId) throw new Error(`Kling: no task_id in submit response: ${JSON.stringify(json)}`);
+    if (!taskId) throw new Error('Kling: no task_id in submit response (check Railway logs)');
     return taskId;
   });
 }
@@ -82,7 +83,8 @@ async function pollUntilDone(taskId) {
 
       if (!resp.ok) {
         const body = await resp.text();
-        const err  = new Error(`Kling poll ${resp.status}: ${body}`);
+        console.error(`[generate-reel] Kling poll ${resp.status} body:`, body);
+        const err  = new Error(`Kling poll failed (HTTP ${resp.status})`);
         err.status = resp.status;
         throw err;
       }
@@ -96,7 +98,8 @@ async function pollUntilDone(taskId) {
     if (status === 'succeed' && videoUrl) return videoUrl;
 
     if (status === 'failed') {
-      throw new Error(`Kling: task ${taskId} failed: ${JSON.stringify(json?.data)}`);
+      console.error(`[generate-reel] Kling task ${taskId} failed:`, JSON.stringify(json?.data));
+      throw new Error(`Kling: task ${taskId} failed (check Railway logs)`);
     }
 
     // status === 'processing' — continue polling

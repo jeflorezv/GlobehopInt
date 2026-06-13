@@ -2,7 +2,7 @@ import sharp from 'sharp';
 import { randomUUID } from 'crypto';
 import path from 'path';
 
-const LOGO_PATH    = process.env.LOGO_PATH ?? './Logos/LOGO - GLOBEHOP SIN FONDO 2023-05.png';
+const LOGO_PATH    = path.resolve(process.env.LOGO_PATH ?? './assets/logo.png');
 const FONT_PATH    = './assets/fonts/Poppins-Bold.ttf';
 const BRAND_HEX    = process.env.BRAND_PRIMARY_COLOR?.trim() || '#44539D';
 const TINT_OPACITY = Math.max(0, Math.min(1, parseFloat(process.env.BRAND_TINT_OPACITY?.trim() || '0.12') || 0.12));

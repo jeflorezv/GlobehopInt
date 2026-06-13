@@ -1,42 +1,92 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import { createHmac } from 'node:crypto';
+import rateLimit from 'express-rate-limit';
 import { runPipeline }           from './pipeline.js';
 import { postToInstagram }       from './post-to-instagram.js';
 import { postReel }              from './post-reel.js';
 import { fetchRecord, markEnCola, markPublished } from './save-to-airtable.js';
 import { sendPublishConfirmation } from './send-alert.js';
 
+const REQUIRED_ENV = [
+  'ANTHROPIC_API_KEY', 'IDEOGRAM_API_KEY',
+  'KLING_API_KEY', 'KLING_API_SECRET',
+  'AIRTABLE_API_KEY', 'AIRTABLE_BASE_ID',
+  'INSTAGRAM_ACCOUNT_ID', 'INSTAGRAM_SYSTEM_USER_TOKEN',
+  'WEBHOOK_SECRET', 'RAILWAY_PUBLIC_URL',
+  'SENDGRID_API_KEY', 'ALERT_EMAIL',
+];
+const missing = REQUIRED_ENV.filter(k => !process.env[k]);
+if (missing.length) {
+  console.error('[startup] Missing required environment variables:', missing.join(', '));
+  process.exit(1);
+}
+
 const app  = express();
 const PORT = process.env.PORT ?? 3000;
 
 app.use(express.json());
 
+const apiLimiter = rateLimit({ windowMs: 60_000, max: 20, standardHeaders: true, legacyHeaders: false });
+
+// Tracks in-flight pipeline runs to prevent concurrent writes for the same record
+const inFlight = new Set();
+
+// Requires the master secret in the x-webhook-secret header only (never query string)
 function requireSecret(req, res, next) {
-  const provided = req.headers['x-webhook-secret'] ?? req.query.secret;
+  const provided = req.headers['x-webhook-secret'];
   if (!provided || provided !== process.env.WEBHOOK_SECRET) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
 }
 
+// Accepts either the master secret (header) or a short-lived HMAC token (query string)
+// used in one-click retry links sent by email.
+function requireRetryToken(req, res, next) {
+  const { recordId } = req.params;
+  const provided = req.headers['x-webhook-secret'] ?? req.query.token;
+  if (!provided) return res.status(401).json({ error: 'Unauthorized' });
+
+  if (provided === process.env.WEBHOOK_SECRET) return next();
+
+  const now = Math.floor(Date.now() / (2 * 3600 * 1000));
+  for (const window of [now, now - 1]) {
+    const expected = createHmac('sha256', process.env.WEBHOOK_SECRET)
+      .update(`${recordId}:${window}`)
+      .digest('hex')
+      .slice(0, 32);
+    if (provided === expected) return next();
+  }
+
+  return res.status(401).json({ error: 'Unauthorized' });
+}
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/generate', requireSecret, async (req, res) => {
+app.post('/generate', requireSecret, apiLimiter, async (req, res) => {
   const { recordId } = req.body;
   if (!recordId) return res.status(400).json({ error: 'recordId required' });
 
+  if (inFlight.has(recordId)) {
+    return res.status(409).json({ error: 'Pipeline already running for this record' });
+  }
+
+  inFlight.add(recordId);
   try {
     const result = await runPipeline(recordId);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  } finally {
+    inFlight.delete(recordId);
   }
 });
 
-app.post('/publish', requireSecret, async (req, res) => {
+app.post('/publish', requireSecret, apiLimiter, async (req, res) => {
   const { recordId } = req.body;
   if (!recordId) return res.status(400).json({ error: 'recordId required' });
 
@@ -82,8 +132,12 @@ app.post('/publish', requireSecret, async (req, res) => {
   }
 });
 
-app.get('/retry/:recordId', requireSecret, async (req, res) => {
+app.get('/retry/:recordId', requireRetryToken, apiLimiter, async (req, res) => {
   const { recordId } = req.params;
+
+  if (inFlight.has(recordId)) {
+    return res.status(409).json({ error: 'Pipeline already running for this record' });
+  }
 
   try {
     const record = await fetchRecord(recordId);
@@ -92,8 +146,14 @@ app.get('/retry/:recordId', requireSecret, async (req, res) => {
       return res.status(400).json({ error: `Cannot retry a record with Estado: ${estado}` });
     }
     await markEnCola(recordId);
-    const result = await runPipeline(recordId);
-    res.json(result);
+
+    inFlight.add(recordId);
+    try {
+      const result = await runPipeline(recordId);
+      res.json(result);
+    } finally {
+      inFlight.delete(recordId);
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

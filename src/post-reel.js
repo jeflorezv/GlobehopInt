@@ -44,15 +44,14 @@ export async function postReel(record) {
 // ─── polling ─────────────────────────────────────────────────────────────────
 
 async function pollUntilFinished(containerId) {
-  for (let attempt = 1; attempt <= MAX_POLLS; attempt++) {
-    await sleep(POLL_INTERVAL_MS);
+  const deadline = Date.now() + (MAX_POLLS * POLL_INTERVAL_MS);
 
+  while (true) {
     const json = await withRetry(async () => {
-      const params = new URLSearchParams({
-        fields:       'status_code',
-        access_token: TOKEN(),
+      const params = new URLSearchParams({ fields: 'status_code' });
+      const resp   = await fetch(`${BASE}/${containerId}?${params}`, {
+        headers: { Authorization: `Bearer ${TOKEN()}` },
       });
-      const resp = await fetch(`${BASE}/${containerId}?${params}`);
 
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
@@ -68,12 +67,12 @@ async function pollUntilFinished(containerId) {
     const status = json?.status_code;
 
     if (status === 'FINISHED') return;
-
     if (status === 'ERROR') {
       throw new Error(`Graph API: reel container ${containerId} processing failed`);
     }
 
-    // status === 'IN_PROGRESS' — keep waiting
+    if (Date.now() >= deadline) break;
+    await sleep(POLL_INTERVAL_MS);
   }
 
   const elapsed = (MAX_POLLS * POLL_INTERVAL_MS) / 1000;
@@ -104,11 +103,10 @@ async function graphPost(path, body) {
 
 async function getPermalink(mediaId) {
   return withRetry(async () => {
-    const params = new URLSearchParams({
-      fields:       'permalink',
-      access_token: TOKEN(),
+    const params = new URLSearchParams({ fields: 'permalink' });
+    const resp   = await fetch(`${BASE}/${mediaId}?${params}`, {
+      headers: { Authorization: `Bearer ${TOKEN()}` },
     });
-    const resp = await fetch(`${BASE}/${mediaId}?${params}`);
 
     if (!resp.ok) {
       const data = await resp.json().catch(() => ({}));

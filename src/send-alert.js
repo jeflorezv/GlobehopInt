@@ -32,8 +32,8 @@ export async function sendPublishConfirmation({ recordId, tipo, postUrl }) {
 // ─── internal ─────────────────────────────────────────────────────────────────
 
 async function sendEmail({ subject, html }) {
-  const from = process.env.ALERT_EMAIL;
-  const to   = process.env.ALERT_EMAIL;
+  const from = process.env.ALERT_FROM_EMAIL ?? process.env.ALERT_EMAIL;
+  const to   = process.env.ALERT_TO_EMAIL   ?? process.env.ALERT_EMAIL;
 
   await withRetry(async () => {
     const resp = await fetch(SENDGRID_URL, {

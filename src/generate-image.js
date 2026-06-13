@@ -39,14 +39,15 @@ export async function generateImage(record, ctx) {
 
     if (!resp.ok) {
       const body = await resp.text();
-      const err  = new Error(`Ideogram ${resp.status}: ${body}`);
+      console.error(`[generate-image] Ideogram ${resp.status} body:`, body);
+      const err  = new Error(`Ideogram request failed (HTTP ${resp.status})`);
       err.status = resp.status;
       throw err;
     }
 
     const json = await resp.json();
     const url  = json?.data?.[0]?.url;
-    if (!url) throw new Error(`Ideogram: no image URL in response: ${JSON.stringify(json)}`);
+    if (!url) throw new Error('Ideogram: no image URL in response (check Railway logs)');
     return url;
   });
 

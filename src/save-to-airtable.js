@@ -25,7 +25,8 @@ async function patchRecord(recordId, fields) {
 
     if (!resp.ok) {
       const body = await resp.text();
-      const err  = new Error(`Airtable PATCH ${resp.status}: ${body}`);
+      console.error(`[airtable] PATCH ${recordId} ${resp.status} body:`, body);
+      const err  = new Error(`Airtable PATCH failed (HTTP ${resp.status})`);
       err.status = resp.status;
       throw err;
     }
@@ -46,7 +47,8 @@ export async function fetchRecord(recordId) {
 
     if (!resp.ok) {
       const body = await resp.text();
-      const err  = new Error(`Airtable GET ${resp.status}: ${body}`);
+      console.error(`[airtable] GET ${recordId} ${resp.status} body:`, body);
+      const err  = new Error(`Airtable GET failed (HTTP ${resp.status})`);
       err.status = resp.status;
       throw err;
     }
@@ -66,15 +68,6 @@ export async function fetchRecord(recordId) {
  */
 export async function saveStep(recordId, stepName, fields) {
   await patchRecord(recordId, { ...fields, 'Paso completado': stepName });
-}
-
-/**
- * Marks the record as awaiting human review. Final step of a successful pipeline run.
- *
- * @param {string} recordId
- */
-export async function markPendingReview(recordId) {
-  await patchRecord(recordId, { Estado: 'Pendiente revisión' });
 }
 
 /**

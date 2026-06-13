@@ -1,3 +1,4 @@
+import { createHmac }       from 'node:crypto';
 import { generateContent }  from './generate-content.js';
 import { generateImage }    from './generate-image.js';
 import { generateCarousel } from './generate-carousel.js';
@@ -41,8 +42,10 @@ export async function runPipeline(recordId) {
   const lastDone  = record['Paso completado'];
   const resumeIdx = lastDone ? steps.indexOf(lastDone) + 1 : 0;
 
-  if (resumeIdx > 0) {
+  if (resumeIdx > 0 && resumeIdx < steps.length) {
     console.log(`[pipeline] ${recordId} — resuming from step "${steps[resumeIdx]}" (last done: "${lastDone}")`);
+  } else if (resumeIdx >= steps.length) {
+    console.log(`[pipeline] ${recordId} — all steps already complete (last done: "${lastDone}")`);
   }
 
   // Reconstruct ctx from saved Airtable fields so resumed steps have prior output
@@ -56,7 +59,7 @@ export async function runPipeline(recordId) {
       ctx = await runStep(stepName, tipo, record, ctx);
       await persistStep(stepName, tipo, recordId, ctx);
     } catch (err) {
-      console.error(`[pipeline] ${recordId} — step "${stepName}" failed:`, err);
+      console.error(`[pipeline] ${recordId} — step "${stepName}" failed: ${err.message}`);
       await markError(recordId, stepName, err.message).catch(() => {});
       await sendErrorAlert({
         recordId,
@@ -114,12 +117,11 @@ async function brandSingle(ctx) {
 }
 
 async function brandCarousel(ctx) {
-  const brandedSlides = await Promise.all(
-    ctx.slides.map(async slide => {
-      const { filename } = await applyBrand(slide.imageUrl);
-      return { ...slide, imageUrl: toPublicUrl(filename) };
-    })
-  );
+  const brandedSlides = [];
+  for (const slide of ctx.slides) {
+    const { filename } = await applyBrand(slide.imageUrl);
+    brandedSlides.push({ ...slide, imageUrl: toPublicUrl(filename) });
+  }
   return { ...ctx, slides: brandedSlides };
 }
 
@@ -205,7 +207,15 @@ function ctxFromRecord(record) {
 }
 
 function retryUrl(recordId) {
-  const base   = (process.env.RAILWAY_PUBLIC_URL ?? '').replace(/\/$/, '');
-  const secret = encodeURIComponent(process.env.WEBHOOK_SECRET ?? '');
-  return `${base}/retry/${recordId}?secret=${secret}`;
+  const base  = (process.env.RAILWAY_PUBLIC_URL ?? '').replace(/\/$/, '');
+  const token = retryToken(recordId);
+  return `${base}/retry/${recordId}?token=${token}`;
+}
+
+function retryToken(recordId) {
+  const window = Math.floor(Date.now() / (2 * 3600 * 1000));
+  return createHmac('sha256', process.env.WEBHOOK_SECRET ?? '')
+    .update(`${recordId}:${window}`)
+    .digest('hex')
+    .slice(0, 32);
 }

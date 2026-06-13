@@ -57,5 +57,10 @@ export async function humanizeCaption(record, ctx) {
   const humanized = message.content[0].text.trim();
   if (!humanized) throw new Error('humanize-caption: empty response from Claude');
 
+  if (humanized.length < ctx.caption.length * 0.4) {
+    console.warn('[humanize-caption] Output suspiciously short — falling back to original caption');
+    return { ...ctx };
+  }
+
   return { ...ctx, caption: humanized };
 }
