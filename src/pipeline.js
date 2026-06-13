@@ -151,8 +151,9 @@ async function persistStep(stepName, tipo, recordId, ctx) {
       if (tipo === 'carousel') {
         return saveStep(recordId, 'brand', { 'Slides JSON': JSON.stringify(ctx.slides) });
       }
-      const fields = ctx.imageUrl.startsWith('http') ? { 'URL imagen': ctx.imageUrl } : {};
-      return saveStep(recordId, 'brand', fields);
+      // Save branded URL to a dedicated field so resume can distinguish
+      // pre-brand (raw Ideogram URL) from post-brand (Railway URL).
+      return saveStep(recordId, 'brand', { 'URL imagen branded': ctx.imageUrl });
     }
 
     case 'video':
@@ -171,11 +172,14 @@ async function persistStep(stepName, tipo, recordId, ctx) {
  */
 function ctxFromRecord(record) {
   const ctx = {};
-  if (record['Caption generado'])   ctx.caption  = record['Caption generado'];
-  if (record['Descripción visual']) ctx.visual   = record['Descripción visual'];
-  if (record['Hook'])               ctx.hook     = record['Hook'];
-  if (record['URL imagen'])         ctx.imageUrl = record['URL imagen'];
-  if (record['URL Video'])          ctx.videoUrl = record['URL Video'];
+  if (record['Caption generado'])    ctx.caption  = record['Caption generado'];
+  if (record['Descripción visual'])  ctx.visual   = record['Descripción visual'];
+  if (record['Hook'])                ctx.hook     = record['Hook'];
+  // Prefer the branded Railway URL over the raw Ideogram URL (which expires).
+  // 'URL imagen branded' is written only after the brand step succeeds.
+  if (record['URL imagen branded'])  ctx.imageUrl = record['URL imagen branded'];
+  else if (record['URL imagen'])     ctx.imageUrl = record['URL imagen'];
+  if (record['URL Video'])           ctx.videoUrl = record['URL Video'];
 
   const slidesJson = record['Slides JSON'];
   if (slidesJson) {

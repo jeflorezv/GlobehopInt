@@ -62,13 +62,18 @@ app.post('/publish', requireSecret, async (req, res) => {
     await markPublished(recordId, postUrl);
     await sendPublishConfirmation({ recordId, tipo, postUrl }).catch(() => {});
 
-    // Clean up branded image from /tmp after successful publish
-    const imageUrl = record['URL imagen'];
-    if (imageUrl) {
-      const filename = imageUrl.split('/images/').pop();
-      if (filename?.match(/^branded-[\w-]+\.jpg$/)) {
-        fs.unlink(path.join('/tmp', filename), () => {});
-      }
+    // Clean up branded files from /tmp after successful publish
+    if (tipo === 'carousel') {
+      try {
+        const slides = JSON.parse(record['Slides JSON'] ?? '[]');
+        for (const slide of slides) {
+          const fn = slide.imageUrl?.split('/images/').pop();
+          if (fn?.match(/^branded-[\w-]+\.jpg$/)) fs.unlink(path.join('/tmp', fn), () => {});
+        }
+      } catch {}
+    } else {
+      const fn = record['URL imagen branded']?.split('/images/').pop();
+      if (fn?.match(/^branded-[\w-]+\.jpg$/)) fs.unlink(path.join('/tmp', fn), () => {});
     }
 
     res.json({ ok: true, postUrl });
@@ -81,6 +86,11 @@ app.get('/retry/:recordId', requireSecret, async (req, res) => {
   const { recordId } = req.params;
 
   try {
+    const record = await fetchRecord(recordId);
+    const estado = record['Estado'];
+    if (estado === 'Aprobado' || estado === 'Publicado') {
+      return res.status(400).json({ error: `Cannot retry a record with Estado: ${estado}` });
+    }
     await markEnCola(recordId);
     const result = await runPipeline(recordId);
     res.json(result);

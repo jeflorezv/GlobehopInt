@@ -24,9 +24,9 @@ export async function postToInstagram(record) {
 
 async function postPhoto(record) {
   const caption  = record['Caption generado'];
-  const imageUrl = record['URL imagen'];
+  const imageUrl = record['URL imagen branded'] ?? record['URL imagen'];
 
-  if (!imageUrl) throw new Error('post-to-instagram: URL imagen is empty');
+  if (!imageUrl) throw new Error('post-to-instagram: no image URL on record');
 
   const { id: containerId } = await graphPost(`/${ACCOUNT()}/media`, {
     image_url: imageUrl,

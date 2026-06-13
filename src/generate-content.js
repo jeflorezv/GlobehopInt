@@ -192,6 +192,10 @@ export async function generateContent(record, ctx) {
     throw new Error(`generate-content: missing caption or visual in Claude response`);
   }
 
+  if (!parsed.hook) {
+    console.warn('[generate-content] hook missing from Claude response — text overlay will be skipped');
+  }
+
   return { ...ctx, caption: parsed.caption, visual: parsed.visual, hook: parsed.hook ?? null };
 }
 
