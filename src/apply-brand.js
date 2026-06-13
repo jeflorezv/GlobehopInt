@@ -1,6 +1,5 @@
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
-import { readFileSync } from 'fs';
 import path from 'path';
 
 const LOGO_PATH    = process.env.LOGO_PATH ?? './Logos/LOGO - GLOBEHOP SIN FONDO 2023-05.png';
@@ -10,11 +9,8 @@ const TINT_OPACITY = Math.max(0, Math.min(1, parseFloat(process.env.BRAND_TINT_O
 const BRAND_DARK   = '#1C2631';
 const BRAND_MINT   = '#67BB97';
 
-let poppinsB64 = null;
-function loadFont() {
-  if (!poppinsB64) poppinsB64 = readFileSync(FONT_PATH).toString('base64');
-  return poppinsB64;
-}
+// Absolute font path — required by Sharp text input on Railway
+const FONT_ABS = path.resolve(FONT_PATH);
 
 export async function applyBrand(imageUrl, hookText = null) {
   const resp = await fetch(imageUrl);
@@ -33,7 +29,9 @@ export async function applyBrand(imageUrl, hookText = null) {
 
   // Gradient footer + Poppins hook text
   if (hookText) {
-    composites.push({ input: Buffer.from(buildTextSvg(hookText, width, height)), blend: 'over' });
+    for (const layer of await buildTextOverlay(hookText, width, height)) {
+      composites.push(layer);
+    }
   }
 
   const logoBuf = await sharp(LOGO_PATH).trim().resize(Math.round(width * 0.42)).png().toBuffer();
@@ -46,49 +44,71 @@ export async function applyBrand(imageUrl, hookText = null) {
   return { filename, tmpPath };
 }
 
-function buildTextSvg(text, width, height) {
-  const font    = loadFont();
+async function buildTextOverlay(text, imgW, imgH) {
   const parts   = text.split('\n');
-  const line1   = (parts[0] ?? text).trim();
+  const line1   = (parts[0] ?? '').trim();
   const line2   = (parts[1] ?? '').trim();
-  const fs1     = Math.round(width * 0.052);
-  const fs2     = Math.round(width * 0.068);
+  const fs1     = Math.round(imgW * 0.052);
+  const fs2     = Math.round(imgW * 0.068);
   const gap     = Math.round(fs1 * 0.5);
   const pad     = Math.round(fs2 * 1.1);
-  const gradY   = Math.round(height * 0.58);
-  const textW   = Math.round(width * 0.88);
-  const accentY = height - pad - fs2 - gap - fs1 - 24;
-  const y1      = height - pad - fs2 - gap;
-  const y2      = height - pad;
+  const gradY   = Math.round(imgH * 0.58);
+  const textW   = Math.round(imgW * 0.88);
+  const accentY = imgH - pad - fs2 - gap - fs1 - 24;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+  const layers = [];
+
+  // Gradient footer + accent bar via SVG (no font needed — librsvg handles these fine)
+  const gradSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${imgW}" height="${imgH}">
     <defs>
-      <style>@font-face { font-family:"Poppins"; font-weight:bold; src:url("data:font/truetype;base64,${font}"); }</style>
-      <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+      <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%"   stop-color="${BRAND_DARK}" stop-opacity="0"/>
         <stop offset="50%"  stop-color="${BRAND_DARK}" stop-opacity="0.72"/>
         <stop offset="100%" stop-color="${BRAND_DARK}" stop-opacity="0.92"/>
       </linearGradient>
     </defs>
-    <rect x="0" y="${gradY}" width="${width}" height="${height - gradY}" fill="url(#grad)"/>
-    <rect x="${Math.round(width*0.06)}" y="${accentY}" width="${textW}" height="3" rx="1" fill="${BRAND_MINT}"/>
-    ${line1 ? `<text x="${width/2}" y="${y1}" text-anchor="middle"
-      font-family="Poppins,sans-serif" font-size="${fs1}" font-weight="bold"
-      fill="white" fill-opacity="0.80"
-      textLength="${textW}" lengthAdjust="spacingAndGlyphs"
-    >${escXml(line1)}</text>` : ''}
-    ${line2 ? `<text x="${width/2}" y="${y2}" text-anchor="middle"
-      font-family="Poppins,sans-serif" font-size="${fs2}" font-weight="bold"
-      fill="white"
-      textLength="${textW}" lengthAdjust="spacingAndGlyphs"
-    >${escXml(line2)}</text>` : ''}
+    <rect x="0" y="${gradY}" width="${imgW}" height="${imgH - gradY}" fill="url(#g)"/>
+    <rect x="${Math.round(imgW * 0.06)}" y="${accentY}" width="${textW}" height="3" rx="1" fill="${BRAND_MINT}"/>
   </svg>`;
+  layers.push({ input: Buffer.from(gradSvg), blend: 'over' });
+
+  // Text rendered via Sharp's native text input (libvips/Pango honours the .ttf file)
+  const renderLine = async (lineText, fontSize, opacity = 1) => {
+    const alpha  = Math.round(opacity * 255).toString(16).padStart(2, '0').toUpperCase();
+    const colour = `#FFFFFF${alpha}`;
+    const buf = await sharp({
+      text: {
+        text:     `<span foreground="${colour}">${escPango(lineText)}</span>`,
+        fontfile: FONT_ABS,
+        font:     `Poppins Bold ${fontSize}`,
+        rgba:     true,
+        align:    'centre',
+        width:    textW,
+        wrap:     'none',
+        dpi:      72,
+      },
+    }).png().toBuffer();
+    return buf;
+  };
+
+  if (line2) {
+    const buf = await renderLine(line2, fs2, 1.0);
+    const { width: bw, height: bh } = await sharp(buf).metadata();
+    layers.push({ input: buf, blend: 'over', top: imgH - pad - bh, left: Math.round((imgW - bw) / 2) });
+  }
+
+  if (line1) {
+    const buf = await renderLine(line1, fs1, 0.8);
+    const { width: bw, height: bh } = await sharp(buf).metadata();
+    layers.push({ input: buf, blend: 'over', top: imgH - pad - fs2 - gap - bh, left: Math.round((imgW - bw) / 2) });
+  }
+
+  return layers;
 }
 
-function escXml(str) {
+function escPango(str) {
   return str
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function hexToRgb(hex) {
