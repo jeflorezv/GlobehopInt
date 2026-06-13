@@ -28,6 +28,12 @@ INJECT:
 - Vary rhythm — short punch followed by a longer line, or vice versa
 - Speak to one specific person, not to "la gente" or "los estudiantes"
 - One concrete detail that makes it feel real (a number, a city, a specific moment)
+- GlobeHop must appear naturally in the body at least once — not just in the CTA. If it's missing or feels forced in the draft, rewrite the line to make it land warmly. Good examples: "En GlobeHop hemos acompañado a cientos de estudiantes que dudaban igual que tú.", "Nuestro equipo en GlobeHop te ayuda a entender exactamente qué necesitas."
+
+BRAND VOICE — GlobeHop is a boutique agency, not a visa office:
+- Convey care, closeness, and experience — not corporate distance
+- Never use: "servicios integrales", "años de experiencia", "somos la mejor agencia"
+- The emotional promise: "you can build a bigger future abroad, and we'll walk with you"
 
 OUTPUT: The rewritten caption only — no preamble, no explanation.
 Length: stay within 150–280 words including hashtags.

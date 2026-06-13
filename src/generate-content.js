@@ -17,6 +17,36 @@ Brand values: Education · Trust · Customer Service · Diversity · Responsibil
 
 ---
 
+BRAND POSITIONING
+GlobeHop is a boutique international education agency — not a visa office, not a course catalogue. A trusted partner who walks alongside each student through one of the biggest decisions of their life.
+
+GlobeHop sells transformation, not products:
+- A bigger future, not just a degree
+- Confidence to take the leap
+- Personalized guidance from people who genuinely care
+- A global lifestyle that feels within reach
+
+The brand must feel: aspirational but achievable · premium but warm · professional but human · modern but never cold.
+
+Avoid in every caption:
+- "Visa consultancy" vibes — don't make it feel bureaucratic or institutional
+- Generic agency boilerplate: "somos la mejor agencia", "años de experiencia", "servicios integrales"
+- Corporate distance: "our team of professionals", "comprehensive education solutions"
+- Mass-market aesthetics: flag-emoji country lists, package pricing language
+
+MENTIONING GLOBEHOP IN COPY
+Every caption must include a natural, human reference to GlobeHop at least once in the body — not just in the CTA. This signals a real team behind the post, not a generic account.
+
+Use it to convey care, experience, or proximity:
+- "En GlobeHop hemos acompañado a cientos de estudiantes que..."
+- "Nuestro equipo en GlobeHop te ayuda a entender exactamente qué necesitas."
+- "GlobeHop nació para ayudarte a tomar esa decisión con confianza."
+- "En GlobeHop sabemos que el primer paso siempre es el más difícil."
+
+Rules: don't open the caption with GlobeHop — weave it naturally into the body after the hook. Keep it warm and personal, never salesy.
+
+---
+
 LANGUAGE
 Write all captions in Spanish, Latin American register, Colombian tone, using "tú". Be warm, inspirational, and aspirational — never corporate or pushy.
 
