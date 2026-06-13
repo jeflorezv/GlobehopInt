@@ -33,6 +33,8 @@ async function postPhoto(record) {
     caption,
   });
 
+  await waitForContainer(containerId);
+
   const { id: mediaId } = await graphPost(`/${ACCOUNT()}/media_publish`, {
     creation_id: containerId,
   });
@@ -49,10 +51,11 @@ async function postCarousel(record) {
 
   if (!slides.length) throw new Error('post-to-instagram: Slides JSON is empty or invalid');
 
-  // Step 1: child containers — created in parallel
+  // Step 1: child containers — created in parallel, then wait for each to finish
   const childIds = await Promise.all(
     slides.map(slide => createChildContainer(slide.imageUrl))
   );
+  await Promise.all(childIds.map(id => waitForContainer(id)));
 
   // Step 2: carousel container
   const { id: containerId } = await graphPost(`/${ACCOUNT()}/media`, {
@@ -61,7 +64,8 @@ async function postCarousel(record) {
     children:   childIds,
   });
 
-  // Step 3: publish
+  // Step 3: wait for carousel container, then publish
+  await waitForContainer(containerId);
   const { id: mediaId } = await graphPost(`/${ACCOUNT()}/media_publish`, {
     creation_id: containerId,
   });
@@ -81,6 +85,23 @@ async function createChildContainer(imageUrl) {
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
+
+async function waitForContainer(containerId, timeoutMs = 90_000, intervalMs = 4_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const params = new URLSearchParams({ fields: 'status_code', access_token: TOKEN() });
+    const resp   = await fetch(`${BASE}/${containerId}?${params}`);
+    if (resp.ok) {
+      const { status_code } = await resp.json();
+      if (status_code === 'FINISHED') return;
+      if (status_code === 'ERROR' || status_code === 'EXPIRED') {
+        throw new Error(`post-to-instagram: container ${containerId} status: ${status_code}`);
+      }
+    }
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  throw new Error(`post-to-instagram: container ${containerId} did not finish within ${timeoutMs / 1000}s`);
+}
 
 async function graphPost(path, body) {
   return withRetry(async () => {
