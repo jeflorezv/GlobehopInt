@@ -27,11 +27,9 @@ export async function applyBrand(imageUrl, hookText = null) {
   }).png().toBuffer();
   composites.push({ input: tintBuf, blend: 'over' });
 
-  // Gradient footer + Poppins hook text
-  if (hookText) {
-    for (const layer of await buildTextOverlay(hookText, width, height)) {
-      composites.push(layer);
-    }
+  // Gradient footer always; Poppins hook text when provided
+  for (const layer of await buildTextOverlay(hookText || null, width, height)) {
+    composites.push(layer);
   }
 
   const logoBuf = await sharp(LOGO_PATH).trim().resize(Math.round(width * 0.42)).png().toBuffer();
@@ -45,7 +43,7 @@ export async function applyBrand(imageUrl, hookText = null) {
 }
 
 async function buildTextOverlay(text, imgW, imgH) {
-  const parts   = text.split('\n');
+  const parts   = text ? text.split('\n') : [];
   const line1   = (parts[0] ?? '').trim();
   const line2   = (parts[1] ?? '').trim();
   const fs1     = Math.round(imgW * 0.052);

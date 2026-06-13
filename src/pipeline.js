@@ -138,6 +138,7 @@ async function persistStep(stepName, tipo, recordId, ctx) {
         : saveStep(recordId, 'caption', {
             'Caption generado':   ctx.caption,
             'Descripción visual': ctx.visual,
+            'Hook':               ctx.hook ?? '',
           });
 
     case 'image':
@@ -172,6 +173,7 @@ function ctxFromRecord(record) {
   const ctx = {};
   if (record['Caption generado'])   ctx.caption  = record['Caption generado'];
   if (record['Descripción visual']) ctx.visual   = record['Descripción visual'];
+  if (record['Hook'])               ctx.hook     = record['Hook'];
   if (record['URL imagen'])         ctx.imageUrl = record['URL imagen'];
   if (record['URL Video'])          ctx.videoUrl = record['URL Video'];
 
