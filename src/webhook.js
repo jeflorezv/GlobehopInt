@@ -27,6 +27,7 @@ const app  = express();
 const PORT = process.env.PORT ?? 3000;
 
 app.use(express.json());
+app.set('trust proxy', 1);
 
 const apiLimiter = rateLimit({ windowMs: 60_000, max: 20, standardHeaders: true, legacyHeaders: false });
 
