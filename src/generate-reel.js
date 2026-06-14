@@ -51,7 +51,7 @@ async function submitTask(imageUrl, visualPrompt) {
         model_name: 'kling-v1',
         image:      imageUrl,
         prompt:     motionPrompt(visualPrompt),
-        duration:   '5',
+        duration:   '10',
         mode:       'std',
         cfg_scale:  0.5,
       }),

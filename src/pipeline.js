@@ -1,10 +1,12 @@
 import { createHmac }       from 'node:crypto';
+import path                 from 'node:path';
 import { generateContent }  from './generate-content.js';
 import { generateImage }    from './generate-image.js';
 import { generateCarousel } from './generate-carousel.js';
 import { generateReel }     from './generate-reel.js';
 import { applyBrand }       from './apply-brand.js';
 import { humanizeCaption }  from './humanize-caption.js';
+import { uploadToCdn }      from './upload-cdn.js';
 import {
   fetchRecord,
   saveStep,
@@ -96,7 +98,7 @@ async function runStep(stepName, tipo, record, ctx) {
     case 'brand':
       return tipo === 'carousel'
         ? brandCarousel(ctx)
-        : brandSingle(ctx);
+        : brandSingle(ctx, tipo);
 
     case 'video':
       return generateReel(record, ctx);
@@ -111,9 +113,9 @@ async function runStep(stepName, tipo, record, ctx) {
 
 // ─── brand helpers ────────────────────────────────────────────────────────────
 
-async function brandSingle(ctx) {
-  const { filename } = await applyBrand(ctx.imageUrl, ctx.hook ?? null);
-  return { ...ctx, imageUrl: toPublicUrl(filename) };
+async function brandSingle(ctx, tipo) {
+  const { filename, tmpPath } = await applyBrand(ctx.imageUrl, ctx.hook ?? null, tipo === 'reel');
+  return { ...ctx, tmpPath, imageUrl: toPublicUrl(filename) };
 }
 
 async function brandCarousel(ctx) {
@@ -164,12 +166,11 @@ async function persistStep(stepName, tipo, recordId, ctx) {
           ...(previewUrl ? { 'Imagen preview': [{ url: previewUrl }] } : {}),
         });
       }
-      // Save branded URL to a dedicated field so resume can distinguish
-      // pre-brand (raw Ideogram URL) from post-brand (Railway URL).
-      // The attachment field lets reviewers see the image inline in Airtable.
+      // Upload to Cloudinary for a permanent URL independent of Railway /tmp.
+      const cdnUrl = await uploadToCdn(ctx.tmpPath, path.basename(ctx.tmpPath));
       return saveStep(recordId, 'brand', {
-        'URL imagen branded': ctx.imageUrl,
-        'Imagen preview':     [{ url: ctx.imageUrl }],
+        'URL imagen branded': cdnUrl,
+        'Imagen preview':     [{ url: cdnUrl }],
       });
     }
 
@@ -192,8 +193,8 @@ function ctxFromRecord(record) {
   if (record['Caption generado'])    ctx.caption  = record['Caption generado'];
   if (record['Descripción visual'])  ctx.visual   = record['Descripción visual'];
   if (record['Hook'])                ctx.hook     = record['Hook'];
-  // Prefer the branded Railway URL over the raw Ideogram URL (which expires).
-  // 'URL imagen branded' is written only after the brand step succeeds.
+  // 'URL imagen branded' is now a permanent Cloudinary URL set after the brand step.
+  // Falls back to the raw Ideogram URL (expires in ~24h) if brand step not yet done.
   if (record['URL imagen branded'])  ctx.imageUrl = record['URL imagen branded'];
   else if (record['URL imagen'])     ctx.imageUrl = record['URL imagen'];
   if (record['URL Video'])           ctx.videoUrl = record['URL Video'];
