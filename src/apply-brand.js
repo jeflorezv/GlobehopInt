@@ -28,8 +28,9 @@ export async function createOverlayPng(width, height, hookText = null) {
     composites.push(layer);
   }
 
-  const logoBuf = await sharp(LOGO_PATH).trim().resize(Math.round(width * 0.28)).png().toBuffer();
-  composites.push({ input: logoBuf, blend: 'over', top: 75, left: 24 });
+  // 12% of frame width — visible but not dominating (plan recommends 5–8%; 12% balances legibility)
+  const logoBuf = await sharp(LOGO_PATH).trim().resize(Math.round(width * 0.12)).png().toBuffer();
+  composites.push({ input: logoBuf, blend: 'over', top: 56, left: 24 });
 
   const filename = `overlay-${randomUUID()}.png`;
   const tmpPath  = path.join('/tmp', filename);
