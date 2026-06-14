@@ -3,7 +3,7 @@ import { withRetry } from './utils/retry.js';
 
 const BASE_URL         = process.env.KLING_API_BASE_URL ?? 'https://api.klingai.com';
 const POLL_INTERVAL_MS = 15_000; // 15 s between polls
-const MAX_POLLS        = 8;      // 2-minute window total
+const MAX_POLLS        = 20;     // 5-minute window total (Kling v1 typically needs 2–4 min)
 
 function klingJwt() {
   const header  = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
