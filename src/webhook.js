@@ -107,18 +107,16 @@ app.post('/generate-next', requireSecret, apiLimiter, async (req, res) => {
   }
 
   console.log(`[pipeline] /generate-next — found ${recordId}`);
+
+  res.json({ accepted: true, recordId });
+
   inFlight.add(recordId);
-  try {
-    const result = await runPipeline(recordId);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  } finally {
-    inFlight.delete(recordId);
-  }
+  runPipeline(recordId)
+    .catch(err => console.error(`[pipeline] ${recordId} background error:`, err.message))
+    .finally(() => inFlight.delete(recordId));
 });
 
-app.post('/generate', requireSecret, apiLimiter, async (req, res) => {
+app.post('/generate', requireSecret, apiLimiter, (req, res) => {
   const { recordId } = req.body;
   if (!recordId) return res.status(400).json({ error: 'recordId required' });
 
@@ -126,15 +124,15 @@ app.post('/generate', requireSecret, apiLimiter, async (req, res) => {
     return res.status(409).json({ error: 'Pipeline already running for this record' });
   }
 
+  // Respond immediately — Railway's reverse proxy times out long-running HTTP connections
+  // (Kling video generation can take 3–5 min). Pipeline continues in the background;
+  // result is tracked via Airtable Estado field.
+  res.json({ accepted: true, recordId });
+
   inFlight.add(recordId);
-  try {
-    const result = await runPipeline(recordId);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  } finally {
-    inFlight.delete(recordId);
-  }
+  runPipeline(recordId)
+    .catch(err => console.error(`[pipeline] ${recordId} background error:`, err.message))
+    .finally(() => inFlight.delete(recordId));
 });
 
 app.post('/publish', requireSecret, apiLimiter, async (req, res) => {
