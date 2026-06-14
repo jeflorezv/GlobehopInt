@@ -104,7 +104,7 @@ export async function generateCarousel(record, ctx) {
     `Content pillar: ${pillar}`,
     `Target audience: ${audience}`,
     tema ? `Destination / topic: ${tema}` : 'Destination / topic: (choose a compelling example relevant to Colombian students)',
-    `CTA — use this text exactly: "${cta}"`,
+    cta ? `CTA — use this text exactly: "${cta}"` : 'CTA: (choose the most fitting from the pillar defaults in the system prompt)',
   ].join('\n');
 
   // Step 1: Claude generates caption + 4 slide scripts
@@ -167,8 +167,9 @@ async function generateSlideImage(visualPrompt) {
       body: JSON.stringify({
         image_request: {
           prompt:              visualPrompt,
-          aspect_ratio:        'ASPECT_4_5',
+          aspect_ratio:        'ASPECT_3_4',
           model:               'V_2',
+          style_type:          'REALISTIC',
           magic_prompt_option: 'OFF',
         },
       }),
@@ -194,6 +195,13 @@ function parseJson(raw) {
   } catch {
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) throw new Error(`generate-carousel: unparseable Claude response:\n${raw}`);
-    return JSON.parse(match[0]);
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      const repaired = match[0].replace(/"(?:[^"\\]|\\.)*"/gs, s =>
+        s.replace(/\n/g, '\\n').replace(/\r/g, '\\r')
+      );
+      return JSON.parse(repaired);
+    }
   }
 }

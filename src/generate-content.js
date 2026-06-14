@@ -162,7 +162,7 @@ CLOTHING RULES — always match clothing to environment:
 LIGHTING & COMPOSITION:
   - Golden hour, bright midday sun, or soft overcast daylight — always warm and inviting
   - Depth of field: subject sharp, landmark or environment slightly soft in background
-  - For 2:3 posts: editorial wide-angle, landmark prominent, person in foreground
+  - For 4:5 posts: portrait composition, subject in lower half, landmark filling the upper background
   - For 9:16 posts: portrait composition, person in lower two-thirds, landmark above
 
 Do NOT include text, logos, watermarks, or overlay elements — clean scene only.
@@ -172,7 +172,7 @@ Write 2–3 sentences: scene + mood + specific detail that makes it feel real.
 
 OUTPUT
 Respond with valid JSON only — no markdown fences, no explanation, nothing else:
-{"caption":"<Instagram caption in Spanish with hashtags>","visual":"<Ideogram prompt in English>","hook":"<2-line aspirational tagline in Spanish printed on the photo — use a newline character \n to separate the two lines. Each line max 6 words. Write like a seasoned brand copywriter: aspirational, warm, personal, motivating. The two lines must feel like one complete idea split across two beats. Model examples (use this exact tone and style): 'Tu próximo capítulo\ncomienza en Australia.' | 'Mucho más que estudiar.\nVive Australia.' | 'Australia te espera.\nTu futuro también.' | 'Estudia en Australia.\nCambia tu mundo.' | 'Tu proyecto de vida\ncomienza en Australia.' — Never use generic phrases. Never use ALL CAPS. No hashtags. No emojis.>"}
+{"caption":"<Instagram caption in Spanish with hashtags>","visual":"<Ideogram prompt in English>","hook":"<2-line overlay text printed on the photo in Poppins Bold. Use \\n to separate ONE line break. Two layers only:\n\nLINE 1 — Transformation hook (largest text): Sell what going abroad GIVES them — a new version of themselves, confidence, international friends, career growth, independence. NOT a country description. The photo already shows the destination. Punchy question or bold statement. Up to 12 words. This is the most important line.\nLINE 2 — CTA (medium text): Direct, specific action. 3–5 words. No emojis. Can include a keyword reply pattern: 'Escríbenos hoy' | 'Agenda tu consulta' | 'Hablemos' | 'Consulta gratuita'\n\nPhilosophy: People don't want Australia. They want what Australia represents — freedom, growth, a better self. Sell the transformation, not the geography.\n\nModel examples (study the rhythm):\n'La mejor versión de ti está a un vuelo de distancia.\\nEscríbenos hoy'\n'¿Y si dentro de un año fueras una persona diferente?\\nAgenda tu consulta'\n'Hace un año ella también dudaba. Hoy vive en Irlanda.\\nEscríbenos'\n'La decisión más difícil no es viajar. Es empezar.\\nHablemos'\n'Dentro de un año podrías estar viviendo esto.\\n¿Empiezas hoy?'\n'Nuevos amigos. Mejor inglés. Una nueva versión de ti.\\nConsulta gratuita'\n\nNever use ALL CAPS. No hashtags. No flag emojis. Never repeat the country name — it's in the photo.>"}
 
 The hook appears printed directly on the photo in large Poppins Bold type. It must earn its place.
 `.trim();
@@ -198,7 +198,7 @@ export async function generateContent(record, ctx) {
     `Content pillar: ${pillar}`,
     `Target audience: ${audience}`,
     tema ? `Destination / topic: ${tema}` : 'Destination / topic: (choose a compelling example relevant to Colombian students)',
-    `CTA — use this text exactly: "${cta}"`,
+    cta ? `CTA — use this text exactly: "${cta}"` : 'CTA: (choose the most fitting from the pillar defaults in the system prompt)',
   ].join('\n');
 
   const message = await withRetry(() =>
@@ -234,9 +234,17 @@ function parseJson(raw) {
   try {
     return JSON.parse(raw);
   } catch {
-    // Claude occasionally wraps JSON in a code fence — strip it and retry
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) throw new Error(`generate-content: unparseable Claude response:\n${raw}`);
-    return JSON.parse(match[0]);
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      // Escape literal newlines inside JSON string values (Claude sometimes outputs these
+      // instead of \n, which is illegal in JSON strings)
+      const repaired = match[0].replace(/"(?:[^"\\]|\\.)*"/gs, s =>
+        s.replace(/\n/g, '\\n').replace(/\r/g, '\\r')
+      );
+      return JSON.parse(repaired);
+    }
   }
 }
