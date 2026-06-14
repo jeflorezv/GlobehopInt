@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { withRetry } from './utils/retry.js';
+import { parseJson } from './utils/parse-json.js';
 
 const client    = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL     = 'claude-sonnet-4-6';
@@ -141,7 +142,7 @@ async function generateSlideScripts(userMessage) {
   );
 
   const raw = message.content[0].text.trim();
-  const parsed = parseJson(raw);
+  const parsed = parseJson(raw, 'generate-carousel');
 
   if (!parsed.caption || !Array.isArray(parsed.slides) || parsed.slides.length !== 4) {
     throw new Error(`generate-carousel: expected caption + 4 slides, got: ${raw.slice(0, 200)}`);
@@ -189,19 +190,3 @@ async function generateSlideImage(visualPrompt) {
   });
 }
 
-function parseJson(raw) {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error(`generate-carousel: unparseable Claude response:\n${raw}`);
-    try {
-      return JSON.parse(match[0]);
-    } catch {
-      const repaired = match[0].replace(/"(?:[^"\\]|\\.)*"/gs, s =>
-        s.replace(/\n/g, '\\n').replace(/\r/g, '\\r')
-      );
-      return JSON.parse(repaired);
-    }
-  }
-}

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { withRetry } from './utils/retry.js';
+import { parseJson } from './utils/parse-json.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -217,7 +218,7 @@ export async function generateContent(record, ctx) {
   );
 
   const raw = message.content[0].text.trim();
-  const parsed = parseJson(raw);
+  const parsed = parseJson(raw, 'generate-content');
 
   if (!parsed.caption || !parsed.visual) {
     throw new Error(`generate-content: missing caption or visual in Claude response`);
@@ -230,21 +231,3 @@ export async function generateContent(record, ctx) {
   return { ...ctx, caption: parsed.caption, visual: parsed.visual, hook: parsed.hook ?? null };
 }
 
-function parseJson(raw) {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error(`generate-content: unparseable Claude response:\n${raw}`);
-    try {
-      return JSON.parse(match[0]);
-    } catch {
-      // Escape literal newlines inside JSON string values (Claude sometimes outputs these
-      // instead of \n, which is illegal in JSON strings)
-      const repaired = match[0].replace(/"(?:[^"\\]|\\.)*"/gs, s =>
-        s.replace(/\n/g, '\\n').replace(/\r/g, '\\r')
-      );
-      return JSON.parse(repaired);
-    }
-  }
-}
