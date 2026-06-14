@@ -5,8 +5,9 @@ import { generateImage }    from './generate-image.js';
 import { generateCarousel } from './generate-carousel.js';
 import { generateReel }     from './generate-reel.js';
 import { applyBrand }       from './apply-brand.js';
+import { applyBrandToVideo } from './apply-brand-video.js';
 import { humanizeCaption }  from './humanize-caption.js';
-import { uploadToCdn }      from './upload-cdn.js';
+import { uploadToCdn, uploadUrlToCdn } from './upload-cdn.js';
 import {
   fetchRecord,
   saveStep,
@@ -100,8 +101,11 @@ async function runStep(stepName, tipo, record, ctx) {
         ? brandCarousel(ctx)
         : brandSingle(ctx, tipo);
 
-    case 'video':
-      return generateReel(record, ctx);
+    case 'video': {
+      const afterKling = await generateReel(record, ctx);
+      const brandedUrl = await applyBrandToVideo(afterKling.videoUrl, ctx.hook ?? null);
+      return { ...afterKling, videoUrl: brandedUrl };
+    }
 
     case 'save':
       return ctx; // persistStep writes Estado=Pendiente revisión
@@ -114,7 +118,13 @@ async function runStep(stepName, tipo, record, ctx) {
 // ─── brand helpers ────────────────────────────────────────────────────────────
 
 async function brandSingle(ctx, tipo) {
-  const { filename, tmpPath } = await applyBrand(ctx.imageUrl, ctx.hook ?? null, tipo === 'reel');
+  if (tipo === 'reel') {
+    // Send a CLEAN image to Kling — no Sharp overlays. Text/logo are applied
+    // via FFmpeg after the video is generated so Kling never distorts the branding.
+    const cdnUrl = await uploadUrlToCdn(ctx.imageUrl);
+    return { ...ctx, imageUrl: cdnUrl };
+  }
+  const { filename, tmpPath } = await applyBrand(ctx.imageUrl, ctx.hook ?? null, false);
   return { ...ctx, tmpPath, imageUrl: toPublicUrl(filename) };
 }
 
@@ -166,7 +176,15 @@ async function persistStep(stepName, tipo, recordId, ctx) {
           ...(previewUrl ? { 'Imagen preview': [{ url: previewUrl }] } : {}),
         });
       }
-      // Upload to Cloudinary for a permanent URL independent of Railway /tmp.
+      if (tipo === 'reel') {
+        // For reels, brandSingle already uploaded the clean image to Cloudinary.
+        // ctx.imageUrl is the permanent CDN URL — save it directly (no local file).
+        return saveStep(recordId, 'brand', {
+          'URL imagen branded': ctx.imageUrl,
+          'Imagen preview':     [{ url: ctx.imageUrl }],
+        });
+      }
+      // single_photo — upload Sharp-branded JPEG from /tmp to Cloudinary
       const cdnUrl = await uploadToCdn(ctx.tmpPath, path.basename(ctx.tmpPath));
       return saveStep(recordId, 'brand', {
         'URL imagen branded': cdnUrl,

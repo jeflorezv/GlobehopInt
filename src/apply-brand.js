@@ -11,6 +11,39 @@ const BRAND_MINT   = '#44539D';
 
 const FONT_ABS = path.resolve(FONT_PATH);
 
+/**
+ * Generates a transparent RGBA PNG overlay (gradient + text + logo) sized to
+ * match a video frame. Intended for FFmpeg post-processing — composited AFTER
+ * Kling generates the video so the AI never sees or distorts the branding.
+ *
+ * @param {number} width     Video frame width
+ * @param {number} height    Video frame height
+ * @param {string|null} hookText  Two-line hook string (lines separated by \n)
+ * @returns {Promise<string>} Absolute path to the PNG file in /tmp
+ */
+export async function createOverlayPng(width, height, hookText = null) {
+  const composites = [];
+
+  for (const layer of await buildTextOverlay(hookText || null, width, height, true)) {
+    composites.push(layer);
+  }
+
+  const logoBuf = await sharp(LOGO_PATH).trim().resize(Math.round(width * 0.28)).png().toBuffer();
+  composites.push({ input: logoBuf, blend: 'over', top: 75, left: 24 });
+
+  const filename = `overlay-${randomUUID()}.png`;
+  const tmpPath  = path.join('/tmp', filename);
+
+  await sharp({
+    create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  })
+    .composite(composites)
+    .png()
+    .toFile(tmpPath);
+
+  return tmpPath;
+}
+
 export async function applyBrand(imageUrl, hookText = null, isReel = false) {
   const resp = await fetch(imageUrl);
   if (!resp.ok) throw new Error(`Failed to fetch image: ${resp.status} ${imageUrl}`);
