@@ -67,6 +67,57 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
+async function findNextRecord() {
+  const today     = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  const BASE_ID   = process.env.AIRTABLE_BASE_ID;
+  const API_KEY   = process.env.AIRTABLE_API_KEY;
+  const TABLE     = process.env.AIRTABLE_TABLE_NAME ?? 'Contenido Instagram';
+  const AT_REST   = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE)}`;
+
+  const params = new URLSearchParams({
+    filterByFormula: `AND({Estado} = 'En cola', {Fecha publicación} <= '${today}')`,
+    'sort[0][field]':     'Fecha publicación',
+    'sort[0][direction]': 'asc',
+    maxRecords: '1',
+  });
+
+  const resp = await fetch(`${AT_REST}?${params}`, {
+    headers: { Authorization: `Bearer ${API_KEY}` },
+  });
+  if (!resp.ok) throw new Error(`Airtable query failed: ${await resp.text()}`);
+  const json = await resp.json();
+  return json.records?.[0]?.id ?? null;
+}
+
+app.post('/generate-next', requireSecret, apiLimiter, async (req, res) => {
+  let recordId;
+  try {
+    recordId = await findNextRecord();
+  } catch (err) {
+    return res.status(500).json({ error: `Airtable query failed: ${err.message}` });
+  }
+
+  if (!recordId) {
+    console.log('[pipeline] /generate-next — no En cola records for today');
+    return res.json({ skipped: true, reason: 'No records En cola for today' });
+  }
+
+  if (inFlight.has(recordId)) {
+    return res.status(409).json({ error: 'Pipeline already running for this record' });
+  }
+
+  console.log(`[pipeline] /generate-next — found ${recordId}`);
+  inFlight.add(recordId);
+  try {
+    const result = await runPipeline(recordId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    inFlight.delete(recordId);
+  }
+});
+
 app.post('/generate', requireSecret, apiLimiter, async (req, res) => {
   const { recordId } = req.body;
   if (!recordId) return res.status(400).json({ error: 'recordId required' });
