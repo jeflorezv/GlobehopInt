@@ -69,18 +69,20 @@ async function buildTextOverlay(text, imgW, imgH, isReel = false) {
   // Single photos: 120px clears Instagram's feed UI overlay.
   const pad     = Math.round(imgW / 24) + (isReel ? 240 : 120);
   const textW   = Math.round(imgW * 0.88);
-  const gradY   = Math.round(imgH * 0.52);
+  // Reels have a taller canvas and vivid backgrounds — start gradient higher and go darker
+  // so white text is always legible regardless of what Kling/Ideogram puts behind it.
+  const gradY      = Math.round(imgH * (isReel ? 0.38 : 0.52));
+  const gradMaxOpa = isReel ? 0.88 : 0.68;
 
   const layers  = [];
   let cursorY   = imgH - pad; // tracks next available bottom edge, moving upward
 
-  // Gradient footer — lighter than before (max 68% opacity)
   const gradSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${imgW}" height="${imgH}">
     <defs>
       <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%"   stop-color="${BRAND_DARK}" stop-opacity="0"/>
-        <stop offset="50%"  stop-color="${BRAND_DARK}" stop-opacity="0.45"/>
-        <stop offset="100%" stop-color="${BRAND_DARK}" stop-opacity="0.68"/>
+        <stop offset="50%"  stop-color="${BRAND_DARK}" stop-opacity="${(gradMaxOpa * 0.6).toFixed(2)}"/>
+        <stop offset="100%" stop-color="${BRAND_DARK}" stop-opacity="${gradMaxOpa}"/>
       </linearGradient>
     </defs>
     <rect x="0" y="${gradY}" width="${imgW}" height="${imgH - gradY}" fill="url(#g)"/>
@@ -107,7 +109,7 @@ async function buildTextOverlay(text, imgW, imgH, isReel = false) {
   // Bottom to top: CTA → main → accent bar
 
   if (lineCta) {
-    const buf = await renderLine(lineCta, fsCta, 0.85);
+    const buf = await renderLine(lineCta, fsCta, 1.0);
     const { width: bw, height: bh } = await sharp(buf).metadata();
     layers.push({ input: buf, blend: 'over', top: cursorY - bh, left: Math.round((imgW - bw) / 2) });
     cursorY -= bh + gap;
