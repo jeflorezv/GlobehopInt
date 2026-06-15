@@ -40,14 +40,20 @@ export async function applyBrandToVideo(videoUrl, hookText = null) {
 
     // 3. FFmpeg: normalize to 1080×1920 @ 30fps, composite overlay, prepare for streaming
     try {
+      // -f image2 + -loop 1 + -framerate 30: force image2 demuxer so -loop works
+      // (png_pipe demuxer ignores -loop; image2 supports it). Match video framerate
+      // to avoid overlay/video sync mismatch that causes frame=0 deadlock.
+      // overlay=shortest=1: stop overlay filter when video stream ends.
       await execFileAsync('ffmpeg', [
-        '-i',      rawPath,
-        '-loop',   '1',      // loop the still-image overlay indefinitely
-        '-i',      overlayPath,
+        '-i',          rawPath,
+        '-f',          'image2',
+        '-loop',       '1',
+        '-framerate',  '30',
+        '-i',          overlayPath,
         '-filter_complex',
           `[0:v]scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=increase,` +
           `crop=${TARGET_W}:${TARGET_H},fps=30[base];` +
-          `[base][1:v]overlay=0:0[v]`,
+          `[base][1:v]overlay=0:0:shortest=1[v]`,
         '-map',      '[v]',
         '-an',
         '-c:v',      'libx264',
@@ -55,7 +61,7 @@ export async function applyBrandToVideo(videoUrl, hookText = null) {
         '-crf',      '23',
         '-pix_fmt',  'yuv420p',
         '-movflags', '+faststart',
-        '-shortest',           // stop when video (shorter input) ends
+        '-shortest',
         '-y',
         outPath,
       ], { maxBuffer: 10 * 1024 * 1024 });
