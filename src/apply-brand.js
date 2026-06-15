@@ -94,6 +94,92 @@ export async function applyBrand(imageUrl, hookText = null, isReel = false) {
   return { filename, tmpPath };
 }
 
+// ─── shared helpers ───────────────────────────────────────────────────────────
+
+async function renderTextLine(text, fontSize, maxWidth, opacity = 1.0, wrap = 'word') {
+  const alpha  = Math.round(opacity * 255).toString(16).padStart(2, '0').toUpperCase();
+  return sharp({
+    text: {
+      text:     `<span foreground="#FFFFFF${alpha}">${escPango(text)}</span>`,
+      fontfile: FONT_ABS,
+      font:     `Poppins Bold ${fontSize}`,
+      rgba:     true,
+      align:    'centre',
+      width:    maxWidth,
+      wrap,
+      dpi:      72,
+    },
+  }).png().toBuffer();
+}
+
+// ─── end card ─────────────────────────────────────────────────────────────────
+
+/**
+ * Generates a solid-background branded end card PNG for the 4-scene reel.
+ * Centred logo + tagline + CTA pill. Used as the final 2-second scene.
+ *
+ * @param {number} width
+ * @param {number} height
+ * @param {string|null} ctaText  CTA line from the hook (line 3), e.g. "Escribe «IRLANDA»"
+ * @returns {Promise<string>} Absolute path to the PNG in /tmp
+ */
+export async function createEndCardPng(width, height, ctaText = null) {
+  const composites = [];
+
+  const bgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <rect x="0" y="0" width="${width}" height="${height}" fill="${BRAND_DARK}"/>
+  </svg>`;
+  composites.push({ input: Buffer.from(bgSvg), blend: 'over' });
+
+  const logoSize = Math.round(width * 0.55);
+  const logoBuf  = await sharp(LOGO_PATH).trim().resize(logoSize).png().toBuffer();
+  const { width: lw, height: lh } = await sharp(logoBuf).metadata();
+  const logoTop  = Math.round(height * 0.28);
+  composites.push({ input: logoBuf, blend: 'over', top: logoTop, left: Math.round((width - lw) / 2) });
+
+  const taglineY   = logoTop + lh + 44;
+  const fsTagline  = Math.round(width * 0.042);
+  const taglineBuf = await renderTextLine('Tu futuro empieza aquí', fsTagline, Math.round(width * 0.80), 0.65);
+  const { width: tw, height: th } = await sharp(taglineBuf).metadata();
+  composites.push({ input: taglineBuf, blend: 'over', top: taglineY, left: Math.round((width - tw) / 2) });
+
+  const barY = taglineY + th + 36;
+  const barW = Math.round(width * 0.30);
+  const barSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <rect x="${Math.round((width - barW) / 2)}" y="${barY}" width="${barW}" height="2" rx="1" fill="${BRAND_MINT}"/>
+  </svg>`;
+  composites.push({ input: Buffer.from(barSvg), blend: 'over' });
+
+  if (ctaText) {
+    const fsCta      = Math.round(width * 0.052);
+    const ctaBuf     = await renderTextLine(ctaText, fsCta, Math.round(width * 0.80), 1.0);
+    const { width: cw, height: ch } = await sharp(ctaBuf).metadata();
+    const pillPadX   = 40;
+    const pillPadY   = 16;
+    const pillW      = cw + pillPadX * 2;
+    const pillH      = ch + pillPadY * 2;
+    const pillLeft   = Math.round((width - pillW) / 2);
+    const ctaTop     = barY + 40;
+    const pillSvg    = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <rect x="${pillLeft}" y="${ctaTop}" width="${pillW}" height="${pillH}" rx="${Math.round(pillH / 2)}" fill="${BRAND_MINT}" fill-opacity="0.92"/>
+    </svg>`;
+    composites.push({ input: Buffer.from(pillSvg), blend: 'over' });
+    composites.push({ input: ctaBuf, blend: 'over', top: ctaTop + pillPadY, left: Math.round((width - cw) / 2) });
+  }
+
+  const filename = `endcard-${randomUUID()}.png`;
+  const tmpPath  = path.join('/tmp', filename);
+
+  await sharp({
+    create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  })
+    .composite(composites)
+    .png()
+    .toFile(tmpPath);
+
+  return tmpPath;
+}
+
 // ─── overlay ──────────────────────────────────────────────────────────────────
 
 async function buildTextOverlay(text, imgW, imgH, isReel = false) {
@@ -130,27 +216,10 @@ async function buildTextOverlay(text, imgW, imgH, isReel = false) {
   </svg>`;
   layers.push({ input: Buffer.from(gradSvg), blend: 'over' });
 
-  const renderLine = async (lineText, fontSize, opacity = 1, wrap = 'none') => {
-    const alpha  = Math.round(opacity * 255).toString(16).padStart(2, '0').toUpperCase();
-    const colour = `#FFFFFF${alpha}`;
-    return sharp({
-      text: {
-        text:     `<span foreground="${colour}">${escPango(lineText)}</span>`,
-        fontfile: FONT_ABS,
-        font:     `Poppins Bold ${fontSize}`,
-        rgba:     true,
-        align:    'centre',
-        width:    textW,
-        wrap,
-        dpi:      72,
-      },
-    }).png().toBuffer();
-  };
-
   // Build bottom → top: CTA pill → body → headline → accent bar
 
   if (lineCta) {
-    const buf = await renderLine(lineCta, fsCta, 1.0);
+    const buf = await renderTextLine(lineCta, fsCta, textW, 1.0, 'none');
     const { width: bw, height: bh } = await sharp(buf).metadata();
     const pillPadX = 36;
     const pillPadY = 14;
@@ -167,14 +236,14 @@ async function buildTextOverlay(text, imgW, imgH, isReel = false) {
   }
 
   if (lineBody) {
-    const buf = await renderLine(lineBody, fsBody, 0.88, 'word');
+    const buf = await renderTextLine(lineBody, fsBody, textW, 0.88);
     const { width: bw, height: bh } = await sharp(buf).metadata();
     layers.push({ input: buf, blend: 'over', top: cursorY - bh, left: Math.round((imgW - bw) / 2) });
     cursorY -= bh + Math.round(gap * 0.6);
   }
 
   if (lineHeadline) {
-    const buf = await renderLine(lineHeadline, fsHeadline, 1.0, 'word');
+    const buf = await renderTextLine(lineHeadline, fsHeadline, textW, 1.0);
     const { width: bw, height: bh } = await sharp(buf).metadata();
     layers.push({ input: buf, blend: 'over', top: cursorY - bh, left: Math.round((imgW - bw) / 2) });
     cursorY -= bh + 16;

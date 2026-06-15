@@ -15,11 +15,11 @@ import {
 } from './save-to-airtable.js';
 import { sendErrorAlert } from './send-alert.js';
 
-// Same step sequence for all types; carousel swaps executors at caption + image.
 const STEPS = {
   single_photo: ['caption', 'humanize', 'image', 'brand', 'save'],
   carousel:     ['caption', 'humanize', 'image', 'brand', 'save'],
-  reel:         ['caption', 'humanize', 'image', 'brand', 'video', 'save'],
+  // Reels: generate 3 scene images → 3 Kling videos → 4-scene assembly → save
+  reel:         ['caption', 'humanize', 'images', 'video', 'save'],
 };
 
 /**
@@ -96,12 +96,44 @@ async function runStep(stepName, tipo, record, ctx) {
       if (tipo === 'carousel') return ctx;
       return generateImage(record, ctx);
 
+    case 'images': {
+      // Reel: generate one Ideogram image per scene in parallel
+      const scenes = ctx.scenes ?? [];
+      if (!scenes.length) throw new Error('[pipeline] images step: ctx.scenes is empty — re-run from caption');
+      const results = await Promise.all(
+        scenes.map(scene => generateImage(record, { ...ctx, visual: scene.visual }))
+      );
+      const updatedScenes = scenes.map((scene, i) => ({ ...scene, imageUrl: results[i].imageUrl }));
+      return { ...ctx, scenes: updatedScenes };
+    }
+
     case 'brand':
       return tipo === 'carousel'
         ? brandCarousel(ctx)
         : brandSingle(ctx, tipo);
 
     case 'video': {
+      if (tipo === 'reel' && ctx.scenes?.length) {
+        // Upload each scene image to CDN (Kling requires public URLs)
+        const cdnScenes = await Promise.all(
+          ctx.scenes.map(async scene => ({
+            ...scene,
+            imageUrl: await uploadUrlToCdn(scene.imageUrl),
+          }))
+        );
+        // Generate Kling clips sequentially to stay within API rate limits
+        const videoScenes = [];
+        for (const scene of cdnScenes) {
+          const result = await generateReel(record, { ...ctx, imageUrl: scene.imageUrl, visual: scene.visual });
+          videoScenes.push({ ...scene, videoUrl: result.videoUrl });
+        }
+        const brandedUrl = await applyBrandToVideo(
+          videoScenes.map(s => s.videoUrl),
+          ctx.hook ?? null,
+        );
+        return { ...ctx, videoUrl: brandedUrl };
+      }
+      // Single-scene fallback for legacy records
       const afterKling = await generateReel(record, ctx);
       const brandedUrl = await applyBrandToVideo(afterKling.videoUrl, ctx.hook ?? null);
       return { ...afterKling, videoUrl: brandedUrl };
@@ -148,25 +180,40 @@ async function persistStep(stepName, tipo, recordId, ctx) {
   switch (stepName) {
 
     case 'caption':
-      return tipo === 'carousel'
-        ? saveStep(recordId, 'caption', {
-            'Caption generado': ctx.caption,
-            'Slides JSON':      JSON.stringify(ctx.slides), // raw Ideogram URLs
-          })
-        : saveStep(recordId, 'caption', {
-            'Caption generado':   ctx.caption,
-            'Descripción visual': ctx.visual,
-            'Hook':               ctx.hook ?? '',
-          });
+      if (tipo === 'carousel') {
+        return saveStep(recordId, 'caption', {
+          'Caption generado': ctx.caption,
+          'Slides JSON':      JSON.stringify(ctx.slides),
+        });
+      }
+      if (tipo === 'reel') {
+        return saveStep(recordId, 'caption', {
+          'Caption generado':   ctx.caption,
+          'Descripción visual': ctx.visual,
+          'Hook':               ctx.hook ?? '',
+          'Slides JSON':        JSON.stringify(ctx.scenes ?? []),
+        });
+      }
+      return saveStep(recordId, 'caption', {
+        'Caption generado':   ctx.caption,
+        'Descripción visual': ctx.visual,
+        'Hook':               ctx.hook ?? '',
+      });
 
     case 'humanize':
       return saveStep(recordId, 'humanize', { 'Caption generado': ctx.caption });
 
     case 'image':
-      // Carousel: images were saved with caption; just advance Paso completado
       return tipo === 'carousel'
         ? saveStep(recordId, 'image', {})
         : saveStep(recordId, 'image', { 'URL imagen': ctx.imageUrl });
+
+    case 'images':
+      // Reel: persist scenes with imageUrls so the video step can resume
+      return saveStep(recordId, 'images', {
+        'Slides JSON': JSON.stringify(ctx.scenes ?? []),
+        'URL imagen':  ctx.scenes?.[0]?.imageUrl ?? '',
+      });
 
     case 'brand': {
       if (tipo === 'carousel') {
@@ -207,19 +254,24 @@ async function persistStep(stepName, tipo, recordId, ctx) {
  * Allows the runner to resume mid-pipeline without re-running completed steps.
  */
 function ctxFromRecord(record) {
-  const ctx = {};
+  const tipo = record['Tipo de post'];
+  const ctx  = {};
+
   if (record['Caption generado'])    ctx.caption  = record['Caption generado'];
   if (record['Descripción visual'])  ctx.visual   = record['Descripción visual'];
   if (record['Hook'])                ctx.hook     = record['Hook'];
-  // 'URL imagen branded' is now a permanent Cloudinary URL set after the brand step.
-  // Falls back to the raw Ideogram URL (expires in ~24h) if brand step not yet done.
   if (record['URL imagen branded'])  ctx.imageUrl = record['URL imagen branded'];
   else if (record['URL imagen'])     ctx.imageUrl = record['URL imagen'];
   if (record['URL Video'])           ctx.videoUrl = record['URL Video'];
 
   const slidesJson = record['Slides JSON'];
   if (slidesJson) {
-    try { ctx.slides = JSON.parse(slidesJson); } catch {}
+    try {
+      const parsed = JSON.parse(slidesJson);
+      // Reel uses Slides JSON for scene descriptors; carousel uses it for slide data
+      if (tipo === 'reel') ctx.scenes = parsed;
+      else                 ctx.slides = parsed;
+    } catch {}
   }
 
   return ctx;
