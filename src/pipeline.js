@@ -7,6 +7,7 @@ import { generateReel }     from './generate-reel.js';
 import { applyBrand }       from './apply-brand.js';
 import { applyBrandToVideo } from './apply-brand-video.js';
 import { humanizeCaption }  from './humanize-caption.js';
+import { renderCarousel }   from './render-carousel.js';
 import { uploadToCdn, uploadUrlToCdn } from './upload-cdn.js';
 import {
   fetchRecord,
@@ -17,8 +18,7 @@ import { sendErrorAlert } from './send-alert.js';
 
 const STEPS = {
   single_photo: ['caption', 'humanize', 'image', 'brand', 'save'],
-  carousel:     ['caption', 'humanize', 'image', 'brand', 'save'],
-  // Reels: generate 3 scene images → 3 Kling videos → 4-scene assembly → save
+  carousel:     ['caption', 'humanize', 'render', 'save'],
   reel:         ['caption', 'humanize', 'images', 'video', 'save'],
 };
 
@@ -91,9 +91,11 @@ async function runStep(stepName, tipo, record, ctx) {
     case 'humanize':
       return humanizeCaption(record, ctx);
 
+    case 'render':
+      if (tipo === 'carousel') return renderCarousel(record, ctx);
+      throw new Error(`[pipeline] render step not supported for tipo="${tipo}"`);
+
     case 'image':
-      // Carousel already has slide images from the caption step — pass through
-      if (tipo === 'carousel') return ctx;
       return generateImage(record, ctx);
 
     case 'images': {
@@ -108,9 +110,7 @@ async function runStep(stepName, tipo, record, ctx) {
     }
 
     case 'brand':
-      return tipo === 'carousel'
-        ? brandCarousel(ctx)
-        : brandSingle(ctx, tipo);
+      return brandSingle(ctx, tipo);
 
     case 'video': {
       if (tipo === 'reel' && ctx.scenes?.length) {
@@ -161,15 +161,6 @@ async function brandSingle(ctx, tipo) {
   return { ...ctx, tmpPath, imageUrl: toPublicUrl(filename) };
 }
 
-async function brandCarousel(ctx) {
-  const brandedSlides = [];
-  for (const slide of ctx.slides) {
-    const { filename } = await applyBrand(slide.imageUrl);
-    brandedSlides.push({ ...slide, imageUrl: toPublicUrl(filename) });
-  }
-  return { ...ctx, slides: brandedSlides };
-}
-
 function toPublicUrl(filename) {
   const base = (process.env.RAILWAY_PUBLIC_URL ?? '').replace(/\/$/, '');
   return `${base}/images/${filename}`;
@@ -204,10 +195,16 @@ async function persistStep(stepName, tipo, recordId, ctx) {
     case 'humanize':
       return saveStep(recordId, 'humanize', { 'Caption generado': ctx.caption });
 
+    case 'render': {
+      const previewUrl = ctx.slides?.[0]?.imageUrl;
+      return saveStep(recordId, 'render', {
+        'Slides JSON': JSON.stringify(ctx.slides ?? []),
+        ...(previewUrl ? { 'Imagen preview': [{ url: previewUrl }] } : {}),
+      });
+    }
+
     case 'image':
-      return tipo === 'carousel'
-        ? saveStep(recordId, 'image', {})
-        : saveStep(recordId, 'image', { 'URL imagen': ctx.imageUrl });
+      return saveStep(recordId, 'image', { 'URL imagen': ctx.imageUrl });
 
     case 'images':
       // Reel: persist scenes with imageUrls so the video step can resume
@@ -217,13 +214,6 @@ async function persistStep(stepName, tipo, recordId, ctx) {
       });
 
     case 'brand': {
-      if (tipo === 'carousel') {
-        const previewUrl = ctx.slides[0]?.imageUrl;
-        return saveStep(recordId, 'brand', {
-          'Slides JSON':    JSON.stringify(ctx.slides),
-          ...(previewUrl ? { 'Imagen preview': [{ url: previewUrl }] } : {}),
-        });
-      }
       if (tipo === 'reel') {
         // For reels, brandSingle already uploaded the clean image to Cloudinary.
         // ctx.imageUrl is the permanent CDN URL — save it directly (no local file).

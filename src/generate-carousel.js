@@ -2,138 +2,100 @@ import Anthropic from '@anthropic-ai/sdk';
 import { withRetry } from './utils/retry.js';
 import { parseJson } from './utils/parse-json.js';
 
-const client    = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const MODEL     = 'claude-sonnet-4-6';
-const IDEOGRAM_URL = 'https://api.ideogram.ai/generate';
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const MODEL  = 'claude-sonnet-4-6';
 
-// Static — prompt-cached. Carousel-specific rules on top of the agency context.
-const SYSTEM_PROMPT = `
-You are a social media content writer for GlobeHop Education Agency, a Colombian international education consultancy based in Bogotá. GlobeHop helps Colombian students and professionals study, work, and live abroad.
+const SYSTEM = `Eres el estratega de contenido para GlobeHop International, agencia colombiana boutique de educación internacional (Australia, Irlanda, Canadá, Malta, España, Dubai, EE.UU.).
 
-Motto: "Tu futuro empieza aquí"
-Brand values: Education · Trust · Customer Service · Diversity · Responsibility · Professional Ethics · Empathy · Experiences · Inclusion
+IDIOMA Y VOZ
+- Español colombiano, tuteo, tono cálido e inspirador (amigo que ya estudió afuera)
+- Menciona GlobeHop naturalmente — nunca suenes corporativo ni vendedor
+- Enfoca en transformación personal, no en datos turísticos
 
-LANGUAGE: All caption text in Spanish, Latin American register, Colombian tone, "tú". Warm, inspirational, never corporate.
+CAPTION INSTAGRAM
+Estructura: hook (1 frase) → dato o beneficio sorprendente → "👉 Desliza para ver más" → CTA con «KEYWORD» → 10-15 hashtags
+Longitud: 120-180 palabras. Emojis con moderación (2-4 máx).
 
-AUDIENCE SEGMENTS
-- estudiantes_secundaria: High school students (16–18). Dreams, adventure, first big life decision.
-- universitarios: University students (18–25). Career clarity, global CV, independence.
-- padres: Parents. Safety, ROI, proud parenting, responsible planning.
-- profesionales: Working professionals (25–35). Career pivot, postgrad, competitive edge.
-- adultos: Adults 30+. Personal growth, reinvention, it's not too late.
+SELECCIÓN DE TEMPLATE (elige el más adecuado según el pillar + audiencia + destino)
+T01 Destination Discovery   → S2:oportunidad S3:beneficio S4:beneficio S5:transformación       [destination_spotlight]
+T02 Student Success Story   → S2:reto S3:decisión S4:viaje S5:resultado                        [student_story]
+T03 Parent Content          → S2:miedo S3:realidad S4:seguridad S5:éxito                      [padres]
+T04 Visa Mistakes           → S2:error#1 S3:error#2 S4:error#3 S5:solución                    [visa_tip]
+T05 Visa Requirements       → S2:requisito1 S3:requisito2 S4:requisito3 S5:pro tip            [visa_tip]
+T06 Cost Breakdown          → S2:matrícula S3:alojamiento S4:vida diaria S5:realidad          [visa_tip/destination]
+T07 Myth vs Reality         → S2:mito S3:realidad S4:mito S5:realidad                        [any]
+T08 Work While Studying     → S2:derechos S3:trabajos típicos S4:beneficios S5:ejemplo real  [destination_spotlight]
+T09 Compare Destinations    → S2:destino A S3:destino B S4:destino C S5:mejor fit            [destination_spotlight]
+T10 Study Pathway           → S2:elige destino S3:elige curso S4:aplica S5:visa              [agency_promo]
+T11 Career Transformation   → S2:oportunidad S3:estudio S4:habilidades S5:futuro             [profesionales]
+T12 Student Life            → S2:campus S3:amigos S4:viajes S5:crecimiento                   [estudiantes]
+T13 English Improvement     → S2:nivel actual S3:inmersión S4:práctica diaria S5:resultados  [visa_tip/destination]
+T14 FAQ Carousel            → S2:FAQ#1 S3:FAQ#2 S4:FAQ#3 S5:FAQ#4                            [any]
+T15 Timeline 90 Days        → S2:mes1 S3:mes2 S4:mes3 S5:salida                              [agency_promo]
+T16 Age Objections          → S2:18-24 S3:25-34 S4:35+ S5:historia de éxito                [adultos]
+T17 Destination Checklist   → S2:check1 S3:check2 S4:check3 S5:bonus tip                    [destination_spotlight]
+T18 Student Testimonial     → S2:problema S3:experiencia S4:resultado S5:recomendación       [student_story]
+T19 GlobeHop Difference     → S2:soporte personalizado S3:visas S4:cuidado S5:resultados     [agency_promo]
+T20 Lead Generation         → S2:oportunidad S3:beneficio1 S4:beneficio2 S5:urgencia         [agency_promo]
 
-CONTENT PILLARS
-- destination_spotlight: Showcase a destination with wow-factor detail.
-- visa_tip: Practical, actionable visa or immigration tip.
-- student_story: Inspirational student journey — personal and relatable.
-- agency_promo: GlobeHop's value proposition. Focus on the student's outcome.
+LAYOUTS DISPONIBLES PARA SLIDES 2-5
+Elige el que mejor exprese cada slide. No repitas el mismo layout en slides consecutivos.
+- "statement": afirmación contundente, contraste antes/después, mito/realidad, o insight único
+- "list": cuando el slide tiene 3-4 ítems distintos (requisitos, pasos, beneficios, checklist)
+- "fact": cuando el slide gira en torno a una cifra o estadística clave
 
-CAROUSEL STRUCTURE (4 slides, always in this order)
-- Slide 1 — Hook: A bold statement, question, or surprising fact that stops the scroll.
-- Slide 2 — Context / Problem: Why this matters. Pain point, aspiration, or key insight.
-- Slide 3 — Value / Solution: The main takeaway — tip, destination detail, story peak, or agency differentiator.
-- Slide 4 — CTA: Close with a strong, specific call to action. If a CTA is provided use it exactly. If not, write a compelling one that drives a DM, comment, or link-in-bio action.
+ESPECIFICACIONES POR LAYOUT — respeta ESTRICTAMENTE los límites de caracteres (se renderiza en pantalla):
+hook       → headline: ≤50 chars   | subtext: ≤40 chars (opcional, null si no aplica)
+statement  → headline: ≤60 chars   | body: ≤100 chars (opcional)
+list       → headline: ≤45 chars   | items: array de 3-4 strings, c/u ≤35 chars
+fact       → headline: ≤40 chars (opcional) | stat: ≤8 chars | statLabel: ≤35 chars | body: ≤80 chars (opcional)
+cta        → headline: ≤45 chars (opcional) | keyword: nombre del destino en MAYÚSCULAS | offer: ≤25 chars
 
-OVERALL CAPTION FORMAT (for the Instagram post — not per-slide)
-- Hook line (same or variation of Slide 1 hook)
-- 2–3 lines of body copy connecting all slides
-- "👉 Desliza para ver más" (always include this)
-- MANDATORY CTA on its own line — use the provided CTA exactly, or if none is given choose the most fitting:
-    destination_spotlight → "📲 Escríbenos por DM y te contamos cómo llegar."
-    visa_tip             → "💬 ¿Tienes dudas sobre tu visa? Escríbenos, te ayudamos."
-    student_story        → "✨ ¿Listo para escribir tu propia historia? Escríbenos por DM."
-    agency_promo         → "📲 Agenda tu asesoría gratuita. Escríbenos hoy."
-- Blank line
-- 10–15 hashtags mixing Spanish and English
+SLIDES FIJOS:
+- Slide 1: layout siempre "hook"
+- Slide 6: layout siempre "cta" — keyword = destino en MAYÚSCULAS (IRLANDA, AUSTRALIA, CANADA, MALTA, DUBAI, ESPAÑA)
 
-VISUAL PROMPT RULES (per slide, in English for Ideogram)
-Follow the GlobeHop visual style: bright natural light, real-looking people (not obvious stock photo poses), modern architecture, clean compositions, warm skin tones. Premium but approachable. Photorealistic, editorial quality.
+REGLAS DE CONTENIDO
+- Textos en español. Sin él/ella — usa "tú" o formas neutras.
+- Headlines sin puntuación extraña al final — se ven mejor en negrita sin punto ni coma
 
-Each slide's scene must feel distinct but visually cohesive (consistent tone, lighting style, subject type).
-
-PEOPLE & SCENE ARCHETYPES — vary across slides, choose what fits each slide's concept:
-  Slide 1 (Hook): Group of 2–4 multicultural students laughing near an iconic landmark — high energy, genuine joy
-  Slide 2 (Context): Student studying on laptop in a modern café, books and headphones on table
-  Slide 3 (Value): Student or small group at a recognisable city location — looking inspired or exploring
-  Slide 4 (CTA): Student looking toward a skyline from behind, aspirational composition, warm light
-
-CLOTHING RULES — always match clothing to environment:
-  - Near beach or outdoor summer: casual summer clothes (linen, light t-shirt, shorts, sundress) — NEVER swimwear
-  - Campus or city: smart casual (jeans, sneakers, light jacket)
-  - Airport: travel-ready casual with carry-on or suitcase
-  - Café/indoor: relaxed smart casual
-
-DESTINATION ANCHORING — always include an iconic, unmistakable landmark for the destination:
-  Australia: Sydney Opera House, Harbour Bridge, Bondi promenade, Melbourne laneways.
-  Canada: CN Tower, Banff lakes, Vancouver skyline. UK: Big Ben, Tower Bridge, Oxford spires.
-  Malta: Valletta limestone streets, Blue Lagoon, Grand Harbour. (Same principle for any other destination.)
-
-- 2:3 aspect ratio composition (portrait)
-- No text, logos, watermarks, or overlay elements
-- 2–3 sentences per prompt: scene + mood + specific detail that makes it feel real
-
-OUTPUT — valid JSON only, no markdown, no explanation:
+RESPONDE SOLO CON JSON VÁLIDO, sin texto antes ni después:
 {
-  "caption": "<overall Instagram caption in Spanish with hashtags>",
+  "caption": "Caption completo con hashtags",
+  "template": 1,
+  "templateName": "Destination Discovery",
+  "keyword": "IRLANDA",
   "slides": [
-    { "slide": 1, "concept": "<1-line description of this slide's role>", "visual": "<Ideogram prompt in English>" },
-    { "slide": 2, "concept": "<1-line description>", "visual": "<Ideogram prompt in English>" },
-    { "slide": 3, "concept": "<1-line description>", "visual": "<Ideogram prompt in English>" },
-    { "slide": 4, "concept": "<1-line description>", "visual": "<Ideogram prompt in English>" }
+    { "slideNumber": 1, "layout": "hook", "headline": "...", "subtext": "..." },
+    { "slideNumber": 2, "layout": "list", "headline": "...", "items": ["...", "...", "..."] },
+    { "slideNumber": 3, "layout": "fact", "headline": "...", "stat": "...", "statLabel": "...", "body": "..." },
+    { "slideNumber": 4, "layout": "statement", "headline": "...", "body": "..." },
+    { "slideNumber": 5, "layout": "statement", "headline": "..." },
+    { "slideNumber": 6, "layout": "cta", "headline": "...", "keyword": "IRLANDA", "offer": "Consulta gratuita" }
   ]
-}
-`.trim();
+}`.trim();
 
-/**
- * Generates a full Instagram carousel: Claude writes 4 slide scripts, then
- * Ideogram generates all 4 images in parallel.
- *
- * Handles both the caption and image steps for carousel in a single module call.
- *
- * @param {object} record  Raw Airtable record fields
- * @param {object} ctx     Pipeline context accumulated by prior steps
- * @returns {Promise<object>} { ...ctx, caption, slides }
- *   slides: [{ slide, concept, visual, imageUrl }, ...]
- */
 export async function generateCarousel(record, ctx) {
-  const pillar   = record['Pilar'];
-  const audience = record['Audiencia'];
-  const tema     = record['Destino/Tema'];
-  const cta      = record['CTA'];
+  const destino  = record['Destino/Tema'] ?? '';
+  const pillar   = record['Pilar']        ?? record['Pillar'] ?? '';
+  const audience = record['Audiencia']    ?? 'jóvenes colombianos 18-30';
+  const cta      = record['CTA']          ?? 'Escríbenos por DM';
 
   const userMessage = [
-    `Content pillar: ${pillar}`,
-    `Target audience: ${audience}`,
-    tema ? `Destination / topic: ${tema}` : 'Destination / topic: (choose a compelling example relevant to Colombian students)',
-    cta ? `CTA — use this text exactly: "${cta}"` : 'CTA: (choose the most fitting from the pillar defaults in the system prompt)',
+    `Destino: ${destino}`,
+    `Pillar: ${pillar}`,
+    `Audiencia: ${audience}`,
+    `CTA: ${cta}`,
   ].join('\n');
 
-  // Step 1: Claude generates caption + 4 slide scripts
-  const { caption, slides: slideScripts } = await generateSlideScripts(userMessage);
-
-  // Step 2: Ideogram generates all 4 images in parallel
-  const imageUrls = await Promise.all(
-    slideScripts.map(slide => generateSlideImage(slide.visual))
-  );
-
-  // Merge image URLs into slide objects
-  const slides = slideScripts.map((slide, i) => ({
-    ...slide,
-    imageUrl: imageUrls[i],
-  }));
-
-  return { ...ctx, caption, slides };
-}
-
-async function generateSlideScripts(userMessage) {
-  const message = await withRetry(() =>
+  const msg = await withRetry(() =>
     client.messages.create({
-      model: MODEL,
-      max_tokens: 2048,
+      model:      MODEL,
+      max_tokens: 3000,
       system: [
         {
-          type: 'text',
-          text: SYSTEM_PROMPT,
+          type:          'text',
+          text:          SYSTEM,
           cache_control: { type: 'ephemeral' },
         },
       ],
@@ -141,52 +103,18 @@ async function generateSlideScripts(userMessage) {
     })
   );
 
-  const raw = message.content[0].text.trim();
-  const parsed = parseJson(raw, 'generate-carousel');
+  const raw  = msg.content[0]?.text ?? '';
+  const json = parseJson(raw, 'generate-carousel');
 
-  if (!parsed.caption || !Array.isArray(parsed.slides) || parsed.slides.length !== 4) {
-    throw new Error(`generate-carousel: expected caption + 4 slides, got: ${raw.slice(0, 200)}`);
+  const { caption, template, templateName, keyword, slides } = json;
+
+  if (!Array.isArray(slides) || slides.length !== 6) {
+    throw new Error(
+      `[generate-carousel] Expected 6 slides, got ${slides?.length ?? 0}\nRaw: ${raw.slice(0, 300)}`
+    );
   }
 
-  for (const slide of parsed.slides) {
-    if (!slide.visual) {
-      throw new Error(`generate-carousel: slide ${slide.slide} missing visual prompt`);
-    }
-  }
+  console.log(`[generate-carousel] T${String(template).padStart(2, '0')} "${templateName}" — "${destino}"`);
 
-  return { caption: parsed.caption, slides: parsed.slides };
+  return { ...ctx, caption, template, templateName, keyword, slides };
 }
-
-async function generateSlideImage(visualPrompt) {
-  return withRetry(async () => {
-    const resp = await fetch(IDEOGRAM_URL, {
-      method: 'POST',
-      headers: {
-        'Api-Key':      process.env.IDEOGRAM_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        image_request: {
-          prompt:              visualPrompt,
-          aspect_ratio:        'ASPECT_3_4',
-          model:               'V_2',
-          style_type:          'REALISTIC',
-          magic_prompt_option: 'OFF',
-        },
-      }),
-    });
-
-    if (!resp.ok) {
-      const body = await resp.text();
-      const err  = new Error(`Ideogram ${resp.status}: ${body}`);
-      err.status = resp.status;
-      throw err;
-    }
-
-    const json = await resp.json();
-    const url  = json?.data?.[0]?.url;
-    if (!url) throw new Error(`Ideogram: no image URL in response: ${JSON.stringify(json)}`);
-    return url;
-  });
-}
-

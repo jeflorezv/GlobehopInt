@@ -14,7 +14,7 @@ Every post type maps to an ordered list of named steps. The runner iterates step
 Step lists per post type:
 ```
 single_photo:  caption → humanize → image → brand → save
-carousel:      caption → humanize → image → brand → save   # image step is carousel-aware
+carousel:      caption → humanize → render → save          # render = Puppeteer HTML/CSS → 6 PNG slides → Cloudinary
 reel:          caption → humanize → images → video → save  # images (plural) = 4 parallel Ideogram calls; no brand step (overlays applied by FFmpeg post-Kling)
 ```
 
@@ -46,9 +46,10 @@ This makes the pipeline resumable at any step boundary. On retry, `runPipeline` 
 Field-to-step mapping — spec:table after "Intermediate save contract":
 | Step | Airtable fields written |
 |---|---|
-| caption | `Caption generado`, `Descripción visual`, `Hook`, `Slides JSON` (scenes for reel) |
+| caption | `Caption generado`, `Descripción visual`, `Hook`, `Slides JSON` (scenes for reel; slide content for carousel) |
 | humanize | `Caption generado` (overwrites with humanized version) |
-| image | `URL imagen` |
+| render (carousel) | `Slides JSON` (6-slide array with Cloudinary imageUrls), `Imagen preview` (slide 1 attachment) |
+| image (single_photo) | `URL imagen` |
 | images (reel) | `Slides JSON` (scenes array with imageUrls), `URL imagen` (scene 0 preview) |
 | brand | `URL imagen branded`, `Imagen preview` (attachment) |
 | video | `URL Video` (Cloudinary URL) |
@@ -103,7 +104,8 @@ One module = one external API or one infrastructure concern. No module imports a
 | `generate-content.js` | Claude API — caption, hook overlay (3-line), 4-scene visual+text prompts for reels |
 | `humanize-caption.js` | Claude API — second pass to strip AI-sounding language from caption |
 | `generate-image.js` | Ideogram API — single image per call (used for single_photo and each reel scene) |
-| `generate-carousel.js` | Ideogram API — 4 slide images generated in parallel |
+| `generate-carousel.js` | Claude API — selects one of 20 templates, generates 6-slide structured JSON content |
+| `render-carousel.js`   | Puppeteer — renders each slide as 1080×1080 HTML/CSS to PNG, uploads all 6 to Cloudinary |
 | `generate-reel.js` | Kling API — image-to-video (async submit + poll), cfg_scale 0.3, std mode |
 | `apply-brand.js` | Sharp — logo overlay + 3-level gradient/text hook for single_photo |
 | `apply-brand-video.js` | FFmpeg — trims Kling clips to 2.5s, applies per-scene overlays via `movie` filter loop, concat, optional music mix at 15% volume |
