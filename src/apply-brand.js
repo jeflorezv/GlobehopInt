@@ -96,11 +96,22 @@ export async function applyBrand(imageUrl, hookText = null, isReel = false) {
 
 // ─── shared helpers ───────────────────────────────────────────────────────────
 
+function stripEmoji(text) {
+  return text
+    .replace(/[\u{1F1E0}-\u{1F1FF}]{2}/gu, '')
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
+    .replace(/[\u{2600}-\u{27BF}]/gu, '')
+    .replace(/️/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function renderTextLine(text, fontSize, maxWidth, opacity = 1.0, wrap = 'word') {
+  const cleaned = stripEmoji(text);
   const alpha  = Math.round(opacity * 255).toString(16).padStart(2, '0').toUpperCase();
   return sharp({
     text: {
-      text:     `<span foreground="#FFFFFF${alpha}">${escPango(text)}</span>`,
+      text:     `<span foreground="#FFFFFF${alpha}">${escPango(cleaned)}</span>`,
       fontfile: FONT_ABS,
       font:     `Poppins Bold ${fontSize}`,
       rgba:     true,
