@@ -42,6 +42,7 @@ export async function applyBrandToVideo(videoUrl, hookText = null) {
     try {
       await execFileAsync('ffmpeg', [
         '-i',      rawPath,
+        '-loop',   '1',      // loop the still-image overlay indefinitely
         '-i',      overlayPath,
         '-filter_complex',
           `[0:v]scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=increase,` +
@@ -54,6 +55,7 @@ export async function applyBrandToVideo(videoUrl, hookText = null) {
         '-crf',      '23',
         '-pix_fmt',  'yuv420p',
         '-movflags', '+faststart',
+        '-shortest',           // stop when video (shorter input) ends
         '-y',
         outPath,
       ], { maxBuffer: 10 * 1024 * 1024 });
