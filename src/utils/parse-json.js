@@ -24,7 +24,7 @@ export function parseJson(raw, context = 'generate') {
 
   try { return JSON.parse(repairJsonStrings(extracted)); } catch {}
 
-  throw new Error(`${context}: unparseable Claude response:\n${extracted.slice(0, 300)}`);
+  throw new Error(`${context}: unparseable Claude response:\n${extracted.slice(0, 800)}`);
 }
 
 /**

@@ -225,7 +225,7 @@ export async function generateContent(record, ctx) {
   const message = await withRetry(() =>
     client.messages.create({
       model: MODEL,
-      max_tokens: 2048,
+      max_tokens: 3500,
       system: [
         {
           type: 'text',
