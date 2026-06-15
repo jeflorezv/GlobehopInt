@@ -40,28 +40,27 @@ export async function applyBrandToVideo(videoUrl, hookText = null) {
 
     // 3. FFmpeg: normalize to 1080×1920 @ 30fps, composite overlay, prepare for streaming
     try {
-      // -f image2 + -loop 1 + -framerate 30: force image2 demuxer so -loop works
-      // (png_pipe demuxer ignores -loop; image2 supports it). Match video framerate
-      // to avoid overlay/video sync mismatch that causes frame=0 deadlock.
-      // overlay=shortest=1: stop overlay filter when video stream ends.
+      // Use `movie` filter inside the filtergraph to load the overlay PNG, then
+      // `loop` to repeat it for the full video duration. This avoids the
+      // multi-input thread queue deadlock (frame=0 hang) seen in FFmpeg 6.x when
+      // a still-image second input can't sync with the video input thread.
+      // overlay=shortest=1 stops compositing when the video ends.
+      // -threads 2 prevents OOM from auto-spawning 60+ libx264 threads on Railway.
       await execFileAsync('ffmpeg', [
-        '-i',          rawPath,
-        '-f',          'image2',
-        '-loop',       '1',
-        '-framerate',  '30',
-        '-i',          overlayPath,
+        '-i',      rawPath,
         '-filter_complex',
+          `movie=${overlayPath},loop=loop=-1:size=1:start=0[ovrl];` +
           `[0:v]scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=increase,` +
           `crop=${TARGET_W}:${TARGET_H},fps=30[base];` +
-          `[base][1:v]overlay=0:0:shortest=1[v]`,
+          `[base][ovrl]overlay=0:0:shortest=1[v]`,
         '-map',      '[v]',
         '-an',
         '-c:v',      'libx264',
         '-preset',   'fast',
         '-crf',      '23',
         '-pix_fmt',  'yuv420p',
+        '-threads',  '2',
         '-movflags', '+faststart',
-        '-shortest',
         '-y',
         outPath,
       ], { maxBuffer: 10 * 1024 * 1024 });
