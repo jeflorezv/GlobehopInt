@@ -39,24 +39,27 @@ export async function applyBrandToVideo(videoUrl, hookText = null) {
     overlayPath = await createOverlayPng(TARGET_W, TARGET_H, hookText);
 
     // 3. FFmpeg: normalize to 1080×1920 @ 30fps, composite overlay, prepare for streaming
-    await execFileAsync('ffmpeg', [
-      '-i',      rawPath,
-      '-i',      overlayPath,
-      '-filter_complex',
-        `[0:v]scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=increase,` +
-        `crop=${TARGET_W}:${TARGET_H},fps=30[base];` +
-        `[base][1:v]overlay=0:0[v]`,
-      '-map',      '[v]',
-      '-map',      '0:a?',
-      '-c:v',      'libx264',
-      '-preset',   'fast',
-      '-crf',      '23',
-      '-pix_fmt',  'yuv420p',
-      '-c:a',      'aac',
-      '-movflags', '+faststart',
-      '-y',
-      outPath,
-    ]);
+    try {
+      await execFileAsync('ffmpeg', [
+        '-i',      rawPath,
+        '-i',      overlayPath,
+        '-filter_complex',
+          `[0:v]scale=${TARGET_W}:${TARGET_H}:force_original_aspect_ratio=increase,` +
+          `crop=${TARGET_W}:${TARGET_H},fps=30[base];` +
+          `[base][1:v]overlay=0:0[v]`,
+        '-map',      '[v]',
+        '-an',
+        '-c:v',      'libx264',
+        '-preset',   'fast',
+        '-crf',      '23',
+        '-pix_fmt',  'yuv420p',
+        '-movflags', '+faststart',
+        '-y',
+        outPath,
+      ], { maxBuffer: 10 * 1024 * 1024 });
+    } catch (ffErr) {
+      throw new Error(`FFmpeg failed:\n${ffErr.stderr || ffErr.message}`);
+    }
 
     // 4. Upload branded video to Cloudinary
     return await uploadVideoToCdn(outPath, path.basename(outPath));
