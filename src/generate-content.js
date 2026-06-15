@@ -174,25 +174,35 @@ Write 2–3 sentences: scene + mood + specific detail that makes it feel real.
 
 REEL SCENES (only for "reel" post type — omit the "scenes" key entirely for single_photo and carousel)
 
-For reels, generate 3 separate Ideogram visual prompts for the 4-scene video structure.
-Each prompt becomes a distinct Kling AI video clip of ~3.5 seconds.
+For reels, generate 4 separate Ideogram visual prompts for the 4-scene video structure.
+Each prompt becomes a distinct Kling AI video clip of 2.5 seconds.
 
 Scene roles:
   scene_hook:         The opening hook shot. Student in an aspirational moment near the iconic destination landmark. Same emotional register as the main "visual" field, but leave breathing room in the frame — the person should have space to make subtle movement. This scene receives the hook text overlay.
   scene_study:        Academic context. Student inside Trinity College library or reading room, in a campus café studying with books and laptop, or arriving at a modern university building with a backpack. Educational, focused, purposeful.
   scene_student_life: Social/cultural scene. 2–3 multicultural students together on campus grass, exploring the city on foot, laughing at a café. Warm, genuine, "this could be your life" energy.
+  scene_cta:          Call-to-action scene. Single student smiling directly toward camera with the iconic destination landmark clearly visible behind them. Warm, confident, approachable expression. This is the final scene that drives DM conversions — the face must feel trustworthy and inviting.
+
+Each scene MUST include two fields:
+  visual: Ideogram prompt in English (2–3 sentences: setting + mood + one specific visual detail)
+  text:   Short Spanish overlay text printed on the scene:
+    scene_hook        → 1 emotional line, max 8 words. A punchy statement that creates curiosity. Complements the hook field — do NOT copy LINE 1 verbatim.
+    scene_study       → 1 line, max 8 words. Connects destination to education. E.g. "Hoy estudia en Irlanda 🇮🇪"
+    scene_student_life → 1–2 lines, max 10 words total. Use \\n between lines if 2 lines. Emotional payoff — social connection, transformation, new life.
+    scene_cta         → Exactly 3 lines separated by \\n. Line 1: question with destination ("¿Quieres estudiar en [Destino]?"). Line 2: DM trigger in uppercase with flag emoji. Line 3: short offer ("Consulta gratuita").
 
 Rules:
 - Apply ALL visual prompt rules (landmark anchoring, ultra-sharp detail, no heavy bokeh, no text/logos, clothing matching environment) to every scene prompt.
 - Scene 1 must reference the same iconic landmark used in the main "visual" field.
-- Scenes 2 and 3 may use different nearby locations but stay in the same destination.
-- Write 2–3 sentences per scene: setting + mood + one specific visual detail.
+- Scenes 2–3 may use different nearby locations but stay in the same destination.
+- Scene 4 must clearly show the destination landmark in the background.
+- Write 2–3 sentences per scene visual: setting + mood + one specific visual detail.
 
 ---
 
 OUTPUT
 Respond with valid JSON only — no markdown fences, no explanation, nothing else:
-{"caption":"<Instagram caption in Spanish with hashtags>","visual":"<Ideogram prompt in English>","scenes":[{"role":"scene_hook","visual":"..."},{"role":"scene_study","visual":"..."},{"role":"scene_student_life","visual":"..."}],"hook":"<3-line overlay text printed on the photo in Poppins Bold. Use \\n to separate each line. THREE layers:\n\nLINE 1 — Headline hook (largest text, 4–8 words): Single biggest emotional payoff of going abroad. Bold statement or punchy question. Sell the transformation — NOT the destination. The photo already shows where. Up to 8 words.\nLINE 2 — Supporting line (medium text, 6–12 words): One sentence of context that deepens LINE 1. What changed. How their life transformed. A contrasting before/after. Complements the headline without repeating it.\nLINE 3 — CTA (medium text, 3–6 words): Keyword-trigger DM action. No emojis. Always use destination name inside guillemets — drives ManyChat automation: 'Escribe «IRLANDA»' | 'Escribe «AUSTRALIA» al DM' | 'DM «QUIERO IR»' | 'Escribe «MALTA»'\n\nPhilosophy: People don't want Australia. They want what Australia represents — freedom, growth, a better self. Sell the transformation, not the geography.\n\nModel examples — study the 3-line rhythm:\n'La mejor versión de ti está aquí.\\nUn vuelo te separa de quien puedes ser.\\nEscribe «AUSTRALIA» al DM'\n'¿Y si dentro de un año fueras diferente?\\nMiles de colombianos ya dieron ese paso.\\nEscribe «INFO» hoy'\n'Hace un año ella también dudaba.\\nHoy vive en Irlanda y no volvería atrás.\\nEscribe «IRLANDA»'\n'La decisión más difícil no es viajar.\\nEs animarte a empezar. El resto lo hacemos juntos.\\nDM «QUIERO IR»'\n\nNever use ALL CAPS. Use guillemets «» for keywords, never ASCII quotes. No hashtags. No flag emojis. Never repeat the country name in LINE 1 or LINE 2 — it's in the photo.>"}
+{"caption":"<Instagram caption in Spanish with hashtags>","visual":"<Ideogram prompt in English>","scenes":[{"role":"scene_hook","visual":"...","text":"Hace un año tenía miedo."},{"role":"scene_study","visual":"...","text":"Hoy estudia en Irlanda 🇮🇪"},{"role":"scene_student_life","visual":"...","text":"Nuevos amigos.\\nNuevas oportunidades."},{"role":"scene_cta","visual":"...","text":"¿Quieres estudiar en Irlanda?\\nEscribe IRLANDA 🇮🇪\\nConsulta gratuita"}],"hook":"<3-line overlay text printed on the photo in Poppins Bold. Use \\n to separate each line. THREE layers:\n\nLINE 1 — Headline hook (largest text, 4–8 words): Single biggest emotional payoff of going abroad. Bold statement or punchy question. Sell the transformation — NOT the destination. The photo already shows where. Up to 8 words.\nLINE 2 — Supporting line (medium text, 6–12 words): One sentence of context that deepens LINE 1. What changed. How their life transformed. A contrasting before/after. Complements the headline without repeating it.\nLINE 3 — CTA (medium text, 3–6 words): Keyword-trigger DM action. No emojis. Always use destination name inside guillemets — drives ManyChat automation: 'Escribe «IRLANDA»' | 'Escribe «AUSTRALIA» al DM' | 'DM «QUIERO IR»' | 'Escribe «MALTA»'\n\nPhilosophy: People don't want Australia. They want what Australia represents — freedom, growth, a better self. Sell the transformation, not the geography.\n\nModel examples — study the 3-line rhythm:\n'La mejor versión de ti está aquí.\\nUn vuelo te separa de quien puedes ser.\\nEscribe «AUSTRALIA» al DM'\n'¿Y si dentro de un año fueras diferente?\\nMiles de colombianos ya dieron ese paso.\\nEscribe «INFO» hoy'\n'Hace un año ella también dudaba.\\nHoy vive en Irlanda y no volvería atrás.\\nEscribe «IRLANDA»'\n'La decisión más difícil no es viajar.\\nEs animarte a empezar. El resto lo hacemos juntos.\\nDM «QUIERO IR»'\n\nNever use ALL CAPS. Use guillemets «» for keywords, never ASCII quotes. No hashtags. No flag emojis. Never repeat the country name in LINE 1 or LINE 2 — it's in the photo.>"}
 
 The hook appears printed directly on the photo in large Poppins Bold type. It must earn its place.
 `.trim();
@@ -219,13 +229,13 @@ export async function generateContent(record, ctx) {
     `Target audience: ${audience}`,
     tema ? `Destination / topic: ${tema}` : 'Destination / topic: (choose a compelling example relevant to Colombian students)',
     cta ? `CTA — use this text exactly: "${cta}"` : 'CTA: (choose the most fitting from the pillar defaults in the system prompt)',
-    tipo === 'reel' ? 'Include the "scenes" array (3 scene prompts as described in REEL SCENES).' : 'Omit the "scenes" key — not needed for this post type.',
+    tipo === 'reel' ? 'Include the "scenes" array (4 scene prompts: hook, study, student_life, cta — each with "visual" and "text" fields as described in REEL SCENES).' : 'Omit the "scenes" key — not needed for this post type.',
   ].join('\n');
 
   const message = await withRetry(() =>
     client.messages.create({
       model: MODEL,
-      max_tokens: 3500,
+      max_tokens: 4000,
       system: [
         {
           type: 'text',

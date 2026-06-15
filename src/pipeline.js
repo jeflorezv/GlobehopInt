@@ -130,6 +130,7 @@ async function runStep(stepName, tipo, record, ctx) {
         const brandedUrl = await applyBrandToVideo(
           videoScenes.map(s => s.videoUrl),
           ctx.hook ?? null,
+          videoScenes,
         );
         return { ...ctx, videoUrl: brandedUrl };
       }

@@ -180,6 +180,83 @@ export async function createEndCardPng(width, height, ctaText = null) {
   return tmpPath;
 }
 
+// ─── simple scene text overlay ───────────────────────────────────────────────
+
+/**
+ * Generates a transparent overlay PNG with a simple text pill for middle reel
+ * scenes (study, student_life). Includes the logo for brand consistency.
+ *
+ * @param {number} width
+ * @param {number} height
+ * @param {string|null} text  Short text, up to 2 lines separated by \n
+ * @returns {Promise<string>} Absolute path to the PNG in /tmp
+ */
+export async function createSimpleTextPng(width, height, text = null) {
+  const composites = [];
+
+  if (text) {
+    const lines    = text.split('\n').filter(Boolean);
+    const fontSize = Math.round(width * 0.058);
+    const textW    = Math.round(width * 0.84);
+    const lineGap  = 10;
+    const pillPadX = 32;
+    const pillPadY = 14;
+
+    const rendered = await Promise.all(lines.map(l => renderTextLine(l, fontSize, textW, 1.0)));
+    const sizes    = await Promise.all(rendered.map(buf => sharp(buf).metadata()));
+
+    const totalH  = sizes.reduce((sum, s) => sum + s.height, 0) + lineGap * (lines.length - 1);
+    const pillW   = Math.max(...sizes.map(s => s.width)) + pillPadX * 2;
+    const pillH   = totalH + pillPadY * 2;
+    const pillTop = height - Math.round(height * 0.09) - pillH;
+    const pillLeft = Math.round((width - pillW) / 2);
+
+    const softGradY = Math.round(height * 0.65);
+    const gradSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="${BRAND_DARK}" stop-opacity="0"/>
+          <stop offset="100%" stop-color="${BRAND_DARK}" stop-opacity="0.70"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="${softGradY}" width="${width}" height="${height - softGradY}" fill="url(#g)"/>
+    </svg>`;
+    composites.push({ input: Buffer.from(gradSvg), blend: 'over' });
+
+    const pillSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <rect x="${pillLeft}" y="${pillTop}" width="${pillW}" height="${pillH}" rx="12" fill="${BRAND_DARK}" fill-opacity="0.72"/>
+    </svg>`;
+    composites.push({ input: Buffer.from(pillSvg), blend: 'over' });
+
+    let lineY = pillTop + pillPadY;
+    for (let i = 0; i < rendered.length; i++) {
+      composites.push({ input: rendered[i], blend: 'over', top: lineY, left: Math.round((width - sizes[i].width) / 2) });
+      lineY += sizes[i].height + lineGap;
+    }
+  }
+
+  const logoBuf = await sharp(LOGO_PATH).trim().resize(Math.round(width * 0.22)).png().toBuffer();
+  const { width: lw, height: lh } = await sharp(logoBuf).metadata();
+  const logoPad = 18;
+  const logoBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <rect x="${24 - logoPad}" y="${56 - logoPad}" width="${lw + logoPad * 2}" height="${lh + logoPad * 2}" rx="12" fill="${BRAND_DARK}" fill-opacity="0.60"/>
+  </svg>`;
+  composites.push({ input: Buffer.from(logoBgSvg), blend: 'over' });
+  composites.push({ input: logoBuf, blend: 'over', top: 56, left: 24 });
+
+  const filename = `scene-text-${randomUUID()}.png`;
+  const tmpPath  = path.join('/tmp', filename);
+
+  await sharp({
+    create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  })
+    .composite(composites)
+    .png()
+    .toFile(tmpPath);
+
+  return tmpPath;
+}
+
 // ─── overlay ──────────────────────────────────────────────────────────────────
 
 async function buildTextOverlay(text, imgW, imgH, isReel = false) {
