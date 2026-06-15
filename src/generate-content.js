@@ -131,6 +131,7 @@ VISUAL PROMPT RULES
 Write an Ideogram image prompt in English. Follow the GlobeHop visual style:
 - Bright natural light, real-looking people (not obvious stock photo poses), modern architecture, clean compositions, warm skin tones. Premium but approachable.
 - Photorealistic, professional photography. Magazine or editorial quality.
+- Ultra-sharp portrait photography. Natural skin texture with visible detail. Individual hair strands clearly rendered. No AI-smoothed skin. No heavy bokeh blur.
 - The image must INSTANTLY communicate the destination and motivate a young Colombian to move there.
 
 DESTINATION ANCHORING — always use an iconic, unmistakable landmark:
@@ -138,7 +139,7 @@ DESTINATION ANCHORING — always use an iconic, unmistakable landmark:
   Canada: CN Tower, Banff/Lake Louise, maple forests, Vancouver skyline, Niagara Falls.
   UK: Big Ben, Tower Bridge, Oxford University spires, red double-decker buses, Notting Hill.
   USA: Statue of Liberty, Golden Gate Bridge, NYC skyline, Harvard campus, Grand Canyon.
-  Ireland: Cliffs of Moher, Trinity College Dublin, colorful Dublin doors, green hills.
+  Ireland: Trinity College Dublin cobblestone courtyard, Ha'penny Bridge, colorful Georgian doors on Merrion Square, Temple Bar district, St. Stephen's Green — one iconic Irish landmark must be sharp and unmistakable in the background.
   New Zealand: Milford Sound, Auckland Sky Tower, rolling green hills.
   Spain: Sagrada Família, Park Güell, Alhambra, Camino de Santiago.
   Malta: Azure Window ruins, Valletta limestone streets, Blue Lagoon, Grand Harbour fortifications.
@@ -162,7 +163,7 @@ CLOTHING RULES — always match clothing to environment:
 
 LIGHTING & COMPOSITION:
   - Golden hour, bright midday sun, or soft overcast daylight — always warm and inviting
-  - Depth of field: subject sharp, landmark or environment slightly soft in background
+  - Depth of field: moderate — subject sharp, background landmark clearly visible and recognizable. No heavy bokeh. The destination must be identifiable from the background alone.
   - For 4:5 posts: portrait composition, subject in lower half, landmark filling the upper background
   - For 9:16 posts: portrait composition, person in lower two-thirds, landmark above
 
@@ -173,7 +174,7 @@ Write 2–3 sentences: scene + mood + specific detail that makes it feel real.
 
 OUTPUT
 Respond with valid JSON only — no markdown fences, no explanation, nothing else:
-{"caption":"<Instagram caption in Spanish with hashtags>","visual":"<Ideogram prompt in English>","hook":"<2-line overlay text printed on the photo in Poppins Bold. Use \\n to separate ONE line break. Two layers only:\n\nLINE 1 — Transformation hook (largest text): Sell what going abroad GIVES them — a new version of themselves, confidence, international friends, career growth, independence. NOT a country description. The photo already shows the destination. Punchy question or bold statement. Up to 12 words. This is the most important line.\nLINE 2 — CTA (medium text): Keyword-trigger DM action. 3–6 words. No emojis. Always use the destination name as a keyword inside guillemets — drives ManyChat automation: 'Escribe «IRLANDA»' | 'Escribe «AUSTRALIA» al DM' | 'DM «QUIERO IR»' | 'Escribe «MALTA»'\n\nPhilosophy: People don't want Australia. They want what Australia represents — freedom, growth, a better self. Sell the transformation, not the geography.\n\nModel examples (study the rhythm):\n'La mejor versión de ti está a un vuelo de distancia.\\nEscribe «AUSTRALIA» al DM'\n'¿Y si dentro de un año fueras una persona diferente?\\nEscribe «INFO» hoy'\n'Hace un año ella también dudaba. Hoy vive en Irlanda.\\nEscribe «IRLANDA»'\n'La decisión más difícil no es viajar. Es empezar.\\nDM «QUIERO IR»'\n'Dentro de un año podrías estar viviendo esto.\\nEscribe «INICIO» hoy'\n'Nuevos amigos. Mejor inglés. Una nueva versión de ti.\\nEscribe «DESTINO» al DM'\n\nNever use ALL CAPS. Use guillemets «» for the keyword, never ASCII double quotes. No hashtags. No flag emojis. Never repeat the country name — it's in the photo.>"}
+{"caption":"<Instagram caption in Spanish with hashtags>","visual":"<Ideogram prompt in English>","hook":"<3-line overlay text printed on the photo in Poppins Bold. Use \\n to separate each line. THREE layers:\n\nLINE 1 — Headline hook (largest text, 4–8 words): Single biggest emotional payoff of going abroad. Bold statement or punchy question. Sell the transformation — NOT the destination. The photo already shows where. Up to 8 words.\nLINE 2 — Supporting line (medium text, 6–12 words): One sentence of context that deepens LINE 1. What changed. How their life transformed. A contrasting before/after. Complements the headline without repeating it.\nLINE 3 — CTA (medium text, 3–6 words): Keyword-trigger DM action. No emojis. Always use destination name inside guillemets — drives ManyChat automation: 'Escribe «IRLANDA»' | 'Escribe «AUSTRALIA» al DM' | 'DM «QUIERO IR»' | 'Escribe «MALTA»'\n\nPhilosophy: People don't want Australia. They want what Australia represents — freedom, growth, a better self. Sell the transformation, not the geography.\n\nModel examples — study the 3-line rhythm:\n'La mejor versión de ti está aquí.\\nUn vuelo te separa de quien puedes ser.\\nEscribe «AUSTRALIA» al DM'\n'¿Y si dentro de un año fueras diferente?\\nMiles de colombianos ya dieron ese paso.\\nEscribe «INFO» hoy'\n'Hace un año ella también dudaba.\\nHoy vive en Irlanda y no volvería atrás.\\nEscribe «IRLANDA»'\n'La decisión más difícil no es viajar.\\nEs animarte a empezar. El resto lo hacemos juntos.\\nDM «QUIERO IR»'\n\nNever use ALL CAPS. Use guillemets «» for keywords, never ASCII quotes. No hashtags. No flag emojis. Never repeat the country name in LINE 1 or LINE 2 — it's in the photo.>"}
 
 The hook appears printed directly on the photo in large Poppins Bold type. It must earn its place.
 `.trim();

@@ -112,7 +112,7 @@ async function pollUntilDone(taskId) {
 // Derives a motion description from the static image prompt.
 // Keeps motion subtle — jarring movement looks unprofessional for educational content.
 function motionPrompt(visualPrompt) {
-  return `${visualPrompt} Gentle, natural camera movement. Slow cinematic push-in or subtle pan. Smooth and calm.`;
+  return `${visualPrompt} Cinematic portrait video. Subtle breathing and natural posture only — no expression changes, no smile morphing, no facial drift between frames. Hair stays natural and still. Realistic eye blink, no exaggerated movement. Slow cinematic push-in or gentle pan. Calm, professional, lifelike.`;
 }
 
 function sleep(ms) {

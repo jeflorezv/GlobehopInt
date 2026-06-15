@@ -18,7 +18,7 @@ const FONT_ABS = path.resolve(FONT_PATH);
  *
  * @param {number} width     Video frame width
  * @param {number} height    Video frame height
- * @param {string|null} hookText  Two-line hook string (lines separated by \n)
+ * @param {string|null} hookText  Hook string with 2–3 lines separated by \n (headline / body / CTA)
  * @returns {Promise<string>} Absolute path to the PNG file in /tmp
  */
 export async function createOverlayPng(width, height, hookText = null) {
@@ -28,8 +28,13 @@ export async function createOverlayPng(width, height, hookText = null) {
     composites.push(layer);
   }
 
-  // 12% of frame width — visible but not dominating (plan recommends 5–8%; 12% balances legibility)
-  const logoBuf = await sharp(LOGO_PATH).trim().resize(Math.round(width * 0.12)).png().toBuffer();
+  const logoBuf = await sharp(LOGO_PATH).trim().resize(Math.round(width * 0.22)).png().toBuffer();
+  const { width: lw, height: lh } = await sharp(logoBuf).metadata();
+  const logoPad = 18;
+  const logoBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <rect x="${24 - logoPad}" y="${56 - logoPad}" width="${lw + logoPad * 2}" height="${lh + logoPad * 2}" rx="12" fill="${BRAND_DARK}" fill-opacity="0.60"/>
+  </svg>`;
+  composites.push({ input: Buffer.from(logoBgSvg), blend: 'over' });
   composites.push({ input: logoBuf, blend: 'over', top: 56, left: 24 });
 
   const filename = `overlay-${randomUUID()}.png`;
@@ -93,23 +98,25 @@ export async function applyBrand(imageUrl, hookText = null, isReel = false) {
 
 async function buildTextOverlay(text, imgW, imgH, isReel = false) {
   const parts    = text ? text.split('\n') : [];
-  const lineMain = (parts[0] ?? '').trim(); // Transformation hook — largest
-  const lineCta  = (parts[1] ?? '').trim(); // CTA                — medium
+  const hasThree = parts.length >= 3;
 
-  const fsMain  = Math.round(imgW * 0.068);
-  const fsCta   = Math.round(imgW * 0.042);
-  const gap     = Math.round(fsMain * 0.38);
-  // Reels: raise text 240px extra so Kling's push-in zoom doesn't push it off the bottom edge.
-  // Single photos: 120px clears Instagram's feed UI overlay.
-  const pad     = Math.round(imgW / 24) + (isReel ? 240 : 120);
-  const textW   = Math.round(imgW * 0.88);
-  // Reels have a taller canvas and vivid backgrounds — start gradient higher and go darker
-  // so white text is always legible regardless of what Kling/Ideogram puts behind it.
-  const gradY      = Math.round(imgH * (isReel ? 0.38 : 0.52));
-  const gradMaxOpa = isReel ? 0.88 : 0.68;
+  // 3-level hierarchy (new format): headline / body / CTA
+  // 2-level fallback (legacy): headline / CTA
+  const lineHeadline = (parts[0] ?? '').trim();
+  const lineBody     = hasThree ? (parts[1] ?? '').trim() : '';
+  const lineCta      = hasThree ? (parts[2] ?? '').trim() : (parts[1] ?? '').trim();
 
-  const layers  = [];
-  let cursorY   = imgH - pad; // tracks next available bottom edge, moving upward
+  const fsHeadline = Math.round(imgW * 0.082);
+  const fsBody     = Math.round(imgW * 0.050);
+  const fsCta      = Math.round(imgW * 0.042);
+  const gap        = Math.round(fsHeadline * 0.32);
+  const pad        = Math.round(imgW / 24) + (isReel ? 240 : 120);
+  const textW      = Math.round(imgW * 0.88);
+  const gradY      = Math.round(imgH * (isReel ? 0.35 : 0.52));
+  const gradMaxOpa = isReel ? 0.92 : 0.68;
+
+  const layers = [];
+  let cursorY  = imgH - pad;
 
   const gradSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${imgW}" height="${imgH}">
     <defs>
@@ -140,24 +147,40 @@ async function buildTextOverlay(text, imgW, imgH, isReel = false) {
     }).png().toBuffer();
   };
 
-  // Bottom to top: CTA → main → accent bar
+  // Build bottom → top: CTA pill → body → headline → accent bar
 
   if (lineCta) {
     const buf = await renderLine(lineCta, fsCta, 1.0);
     const { width: bw, height: bh } = await sharp(buf).metadata();
-    layers.push({ input: buf, blend: 'over', top: cursorY - bh, left: Math.round((imgW - bw) / 2) });
-    cursorY -= bh + gap;
+    const pillPadX = 36;
+    const pillPadY = 14;
+    const pillW    = bw + pillPadX * 2;
+    const pillH    = bh + pillPadY * 2;
+    const pillLeft = Math.round((imgW - pillW) / 2);
+    const pillTop  = cursorY - pillH;
+    const pillSvg  = `<svg xmlns="http://www.w3.org/2000/svg" width="${imgW}" height="${imgH}">
+      <rect x="${pillLeft}" y="${pillTop}" width="${pillW}" height="${pillH}" rx="${Math.round(pillH / 2)}" fill="${BRAND_MINT}" fill-opacity="0.92"/>
+    </svg>`;
+    layers.push({ input: Buffer.from(pillSvg), blend: 'over' });
+    layers.push({ input: buf, blend: 'over', top: pillTop + pillPadY, left: Math.round((imgW - bw) / 2) });
+    cursorY = pillTop - gap;
   }
 
-  if (lineMain) {
-    const buf = await renderLine(lineMain, fsMain, 1.0, 'word');
+  if (lineBody) {
+    const buf = await renderLine(lineBody, fsBody, 0.88, 'word');
+    const { width: bw, height: bh } = await sharp(buf).metadata();
+    layers.push({ input: buf, blend: 'over', top: cursorY - bh, left: Math.round((imgW - bw) / 2) });
+    cursorY -= bh + Math.round(gap * 0.6);
+  }
+
+  if (lineHeadline) {
+    const buf = await renderLine(lineHeadline, fsHeadline, 1.0, 'word');
     const { width: bw, height: bh } = await sharp(buf).metadata();
     layers.push({ input: buf, blend: 'over', top: cursorY - bh, left: Math.round((imgW - bw) / 2) });
     cursorY -= bh + 16;
   }
 
-  // Mint accent bar above the text block
-  if (lineMain) {
+  if (lineHeadline) {
     const barSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${imgW}" height="${imgH}">
       <rect x="${Math.round(imgW * 0.06)}" y="${cursorY}" width="${textW}" height="3" rx="1" fill="${BRAND_MINT}"/>
     </svg>`;
