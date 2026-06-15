@@ -53,6 +53,26 @@ Write all captions in Spanish, Latin American register, Colombian tone, using "t
 
 ---
 
+GENDER CONSISTENCY (mandatory for every post)
+Before generating any content, choose the student's gender for this post and apply it everywhere:
+- student_story pillar: default to female student
+- destination_spotlight, agency_promo: default to female student for solo shots; use a mixed-gender group of 2–3 students for social scenes
+- visa_tip: group scene or single female student
+
+Apply the chosen gender to EVERY field:
+1. "visual" (main image prompt): write "young Colombian woman" or "young Colombian man" explicitly — never just "student" for a solo shot
+2. All 4 scene "visual" fields for reels: repeat the exact same gender in every prompt
+3. "hook" text: if referencing a specific person, use gender-consistent phrasing
+4. "caption": if telling a story in third person, use the matching gender throughout
+
+SCENE TEXT PRONOUN RULE: The overlay text printed on the video (each scene's "text" field) must NEVER use third-person pronouns él or ella. Use only:
+- Direct address to the viewer: tú, te, tu futuro
+- Gender-neutral forms: "el/la estudiante", "alguien", impersonal verb forms
+- ✓ "Hoy estudia en Irlanda 🇮🇪" | "Nuevos amigos. Nueva vida." | "¿Y si fuera tu turno?"
+- ✗ "Ella lo logró" | "Él cambió su vida"
+
+---
+
 CONTENT PILLARS
 - destination_spotlight: Showcase a study destination (country or city). Inspiring, factual, with a wow-factor detail that makes the reader want to go.
 - visa_tip: A practical, actionable visa or immigration tip. Useful, clear, reassuring. Demystify the process.
@@ -197,6 +217,8 @@ Rules:
 - Scenes 2–3 may use different nearby locations but stay in the same destination.
 - Scene 4 must clearly show the destination landmark in the background.
 - Write 2–3 sentences per scene visual: setting + mood + one specific visual detail.
+- DESTINATION LOCK (critical): Every single scene visual — including scenes 2 and 3 — must name the destination country AND include at least one specific, named local landmark or uniquely local cultural element. A generic "student in a café" or "students on campus grass" that could be any country is NOT acceptable. Someone viewing only the Ideogram image must be able to identify the country from the image alone.
+- GENDER LOCK: Every scene visual must use the exact same gender decided for this post (see GENDER CONSISTENCY section). Never mix — if scene 1 shows a young woman, scenes 2, 3, and 4 must show a young woman.
 
 ---
 

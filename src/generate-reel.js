@@ -53,7 +53,7 @@ async function submitTask(imageUrl, visualPrompt) {
         prompt:     motionPrompt(visualPrompt),
         duration:   '5',
         mode:       'std',
-        cfg_scale:  0.5,
+        cfg_scale:  0.3,
       }),
     });
 
