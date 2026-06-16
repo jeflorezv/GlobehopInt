@@ -88,7 +88,7 @@ async function generateBackground(prompt) {
           prompt,
           negative_prompt:     NEGATIVE_PROMPT,
           aspect_ratio:        'ASPECT_3_4',
-          model:               'V_3',
+          model:               'V_2',
           style_type:          'REALISTIC',
           magic_prompt_option: 'OFF',
         },
