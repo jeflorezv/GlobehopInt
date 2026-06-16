@@ -149,7 +149,7 @@ function fonts() {
   `;
 }
 
-function logoPill(size = 234) {
+function logoPill(size = 199) {
   return `<img src="data:image/png;base64,${ICON_B64}"
     style="width:${size}px;height:${size}px;display:block;object-fit:contain;
     filter:drop-shadow(0 2px 8px rgba(0,0,0,0.85));"
@@ -255,8 +255,8 @@ function statementHtml(s, total, bgB64) {
   .top   { display:flex; justify-content:space-between; align-items:flex-start; padding:44px 44px 0; }
   .content {
     flex:1; display:flex; flex-direction:column;
-    justify-content:center; align-items:center; text-align:center;
-    padding:0 76px;
+    justify-content:flex-end; align-items:center; text-align:center;
+    padding:0 76px 90px;
   }
   .headline {
     font-family:'Nexa',sans-serif; font-weight:900;
@@ -330,7 +330,7 @@ function listHtml(s, total, bgB64) {
   }
   .layer { position:relative; z-index:1; display:flex; flex-direction:column; height:100%; }
   .top   { display:flex; justify-content:space-between; align-items:flex-start; padding:44px 44px 0; }
-  .content { flex:1; display:flex; flex-direction:column; justify-content:center; padding:0 64px; }
+  .content { flex:1; display:flex; flex-direction:column; justify-content:flex-end; padding:0 64px 80px; }
   .headline {
     font-family:'Poppins',sans-serif; font-weight:700;
     font-size:44px; color:${C.WHITE};
@@ -363,7 +363,7 @@ function factHtml(s, total, bgB64) {
   }
   .layer { position:relative; z-index:1; display:flex; flex-direction:column; height:100%; }
   .top   { display:flex; justify-content:space-between; align-items:flex-start; padding:44px 44px 0; }
-  .content { flex:1; display:flex; flex-direction:column; justify-content:center; padding:0 80px; }
+  .content { flex:1; display:flex; flex-direction:column; justify-content:flex-end; padding:0 80px 80px; }
   .headline {
     font-family:'Poppins',sans-serif; font-weight:700;
     font-size:34px; color:rgba(255,255,255,0.88);
