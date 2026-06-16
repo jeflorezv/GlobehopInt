@@ -117,6 +117,20 @@ export async function markOmitir(recordId) {
 }
 
 /**
+ * Saves marketing team edits to caption and/or hook before publishing.
+ * Called by POST /review/:recordId/save-edits.
+ *
+ * @param {string} recordId
+ * @param {{ caption?: string, hook?: string }} edits
+ */
+export async function saveEdits(recordId, { caption, hook } = {}) {
+  const fields = {};
+  if (caption !== undefined) fields['Caption generado'] = caption;
+  if (hook    !== undefined) fields['Hook']             = hook;
+  if (Object.keys(fields).length) await patchRecord(recordId, fields);
+}
+
+/**
  * Fetches all records currently in 'Pendiente revisión' state, sorted by
  * publication date. Used by the review dashboard to list content awaiting approval.
  *

@@ -12,6 +12,7 @@ import {
   markEnCola,
   markPublished,
   markOmitir,
+  saveEdits,
 } from './save-to-airtable.js';
 import { sendPublishConfirmation } from './send-alert.js';
 
@@ -262,10 +263,27 @@ app.get('/review/:recordId', requireReviewToken, async (req, res) => {
   try {
     const record = await fetchRecord(recordId);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(recordDetailHtml(recordId, record, token));
+    res.send(recordDetailHtml(recordId, record, token, req));
   } catch (err) {
     res.status(500).setHeader('Content-Type', 'text/html; charset=utf-8')
       .send(errorPage(`Error: ${err.message}`));
+  }
+});
+
+// POST /review/:recordId/save-edits — save caption/hook edits, redirect back to detail page
+app.post('/review/:recordId/save-edits', requireReviewToken, apiLimiter, async (req, res) => {
+  const { recordId } = req.params;
+  const token   = req.body?.reviewToken ?? req.query.token;
+  const caption = req.body?.caption;
+  const hook    = req.body?.hook;
+  const back    = `/review/${esc(recordId)}?token=${encodeURIComponent(token)}&saved=1`;
+
+  try {
+    await saveEdits(recordId, { caption, hook });
+    res.redirect(back);
+  } catch (err) {
+    console.error('[review] save-edits failed:', err.message);
+    res.redirect(`/review/${esc(recordId)}?token=${encodeURIComponent(token)}&error=${encodeURIComponent(err.message)}`);
   }
 });
 
@@ -440,7 +458,7 @@ function cardHtml(record, encodedToken) {
 
 // ─── HTML: record detail ──────────────────────────────────────────────────────
 
-function recordDetailHtml(recordId, record, token) {
+function recordDetailHtml(recordId, record, token, req = {}) {
   const tipo     = record['Tipo de post'] ?? '?';
   const dest     = record['Destino/Tema'] ?? 'Sin destino';
   const fecha    = record['Fecha publicación'] ?? '';
@@ -468,6 +486,24 @@ function recordDetailHtml(recordId, record, token) {
   } else if (imgUrl) {
     mediaHtml = `<div class="media"><img src="${esc(imgUrl)}" alt="${esc(dest)}"></div>`;
   }
+
+  const savedFlash = req?.query?.saved
+    ? '<div class="flash-save">✓ Cambios guardados</div>' : '';
+  const errorFlash = req?.query?.error
+    ? `<div class="flash-err-inline">Error: ${esc(req.query.error)}</div>` : '';
+
+  const editForm = pending ? `
+<div class="edit-section">
+  <div class="section-label">Editar copy</div>
+  <form method="POST" action="/review/${esc(recordId)}/save-edits" class="edit-form">
+    <input type="hidden" name="reviewToken" value="${esc(token)}">
+    <div class="field-label">Hook (3 líneas, separadas por \\n)</div>
+    <input type="text" name="hook" value="${esc(hook)}" class="hook-input" placeholder="Línea 1\\nLínea 2\\nEscribe «AUSTRALIA»">
+    <div class="field-label" style="margin-top:14px">Caption Instagram</div>
+    <textarea name="caption" class="caption-edit" rows="10">${esc(caption)}</textarea>
+    <button type="submit" class="btn btn-save">Guardar cambios</button>
+  </form>
+</div>` : '';
 
   const actionsHtml = pending
     ? `<div class="actions">
@@ -515,6 +551,18 @@ ${BASE_CSS}
 .btn-reject:hover{background:#30363d;color:#e4e4e7}
 form{flex:1;display:flex}form .btn{width:100%}
 .status-note{margin-top:20px;padding:12px 16px;background:#1c2631;border-radius:10px;font-size:14px;color:#71717a;text-align:center}
+.edit-section{margin-top:24px;border-top:1px solid #21262d;padding-top:20px}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#52525b;margin-bottom:12px}
+.edit-form{display:flex;flex-direction:column;gap:6px}
+.field-label{font-size:12px;color:#71717a;font-weight:600}
+.hook-input{width:100%;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px;font-size:14px;color:#e4e4e7;font-family:inherit;outline:none;transition:border-color .15s}
+.hook-input:focus{border-color:#44539D}
+.caption-edit{width:100%;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px;font-size:14px;color:#e4e4e7;font-family:inherit;line-height:1.7;resize:vertical;outline:none;transition:border-color .15s}
+.caption-edit:focus{border-color:#44539D}
+.btn-save{margin-top:10px;background:#44539D;color:#fff;flex:unset;width:100%;padding:12px}
+.btn-save:hover{background:#3a4589}
+.flash-save{margin-bottom:14px;padding:10px 14px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:8px;font-size:13px;color:#22c55e}
+.flash-err-inline{margin-bottom:14px;padding:10px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:13px;color:#ef4444}
 </style>
 </head>
 <body>
@@ -529,6 +577,8 @@ form{flex:1;display:flex}form .btn{width:100%}
   ${hook ? `<div class="hook">${esc(hook)}</div>` : ''}
   <div class="caption-label">Caption Instagram</div>
   <div class="caption">${esc(caption)}</div>
+  ${savedFlash}${errorFlash}
+  ${editForm}
   ${actionsHtml}
 </div>
 </body>

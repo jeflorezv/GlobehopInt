@@ -158,7 +158,15 @@ Write an Ideogram image prompt in English. Follow the GlobeHop visual style:
 - The image must INSTANTLY communicate the destination and motivate a young Colombian to move there.
 
 DESTINATION ANCHORING — always use an iconic, unmistakable landmark:
-  Australia: Sydney Opera House, Sydney Harbour Bridge, Bondi Beach promenade, Great Barrier Reef, Melbourne laneways, Uluru.
+  Australia: Do NOT default to Sydney — rotate across all major study cities. Choose ONE city per post and anchor it with a specific local landmark:
+    Sydney: Opera House, Harbour Bridge, Bondi Beach promenade, Darling Harbour waterfront, QVB (Queen Victoria Building) exterior.
+    Melbourne: Federation Square, Flinders Street Station, Melbourne laneways (Hosier Lane), Royal Botanic Gardens, St Kilda beach foreshore.
+    Brisbane: Story Bridge, South Bank Parklands, Kangaroo Point cliffs, Brisbane River boardwalk, Queen Street Mall.
+    Perth: Kings Park with Swan River panorama, Cottesloe Beach, Elizabeth Quay waterfront, Bell Tower on the foreshore.
+    Adelaide: Adelaide Central Market entrance, Glenelg Beach jetty, North Terrace cultural boulevard, Adelaide Oval exterior.
+    Gold Coast: Surfers Paradise beach skyline, Burleigh Heads rock pools, Broadwater Parklands.
+    Cairns: Esplanade Lagoon, Cairns night market, reef cruise departure terminal.
+    The choice of city should feel natural for the content pillar — e.g. Melbourne for creative/design courses, Sydney for business and finance, Brisbane for outdoors and lifestyle, Perth for a quieter student experience.
   Canada: CN Tower, Banff/Lake Louise, maple forests, Vancouver skyline, Niagara Falls.
   UK: Big Ben, Tower Bridge, Oxford University spires, red double-decker buses, Notting Hill.
   USA: Statue of Liberty, Golden Gate Bridge, NYC skyline, Harvard campus, Grand Canyon.

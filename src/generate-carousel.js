@@ -73,6 +73,16 @@ Cada slide tendrá una fotografía de fondo con overlay oscuro — elige escenas
 - Slide 6: escena aspiracional — estudiante celebrando con bandera del país, skyline al atardecer, o campus con jóvenes felices
 Estilo fotográfico: documentary style, photojournalistic lighting, natural skin texture, visible pores. Evita: perfect skin, beauty photography, ultra attractive faces, AI-looking people. Sin texto ni logos. 2-3 oraciones en inglés.
 
+DESTINO AUSTRALIA — DIVERSIDAD DE CIUDADES:
+No defaultees a Sydney. Elige UNA ciudad para todo el carrusel y usa sus landmarks específicos:
+  Sydney: Opera House, Harbour Bridge, Bondi Beach, Darling Harbour, QVB.
+  Melbourne: Federation Square, Flinders Street Station, Hosier Lane, St Kilda beach.
+  Brisbane: Story Bridge, South Bank Parklands, Kangaroo Point, Queen Street Mall.
+  Perth: Kings Park con Swan River, Cottesloe Beach, Elizabeth Quay.
+  Adelaide: Adelaide Central Market, Glenelg Beach jetty, North Terrace, Adelaide Oval.
+  Gold Coast: Surfers Paradise beach skyline, Burleigh Heads, Broadwater Parklands.
+La ciudad debe ser coherente con el contenido — Melbourne para diseño/creatividad, Sydney para negocios, Brisbane para estilo de vida al aire libre, Perth para experiencia más tranquila.
+
 RESPONDE SOLO CON JSON VÁLIDO, sin texto antes ni después:
 {
   "caption": "Caption completo con hashtags",
