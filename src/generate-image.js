@@ -4,7 +4,7 @@ const IDEOGRAM_URL = 'https://api.ideogram.ai/generate';
 
 // Ideogram aspect ratio tokens per post type
 const ASPECT_RATIO = {
-  single_photo: 'ASPECT_4_5',
+  single_photo: 'ASPECT_3_4',
   reel:         'ASPECT_9_16',
 };
 
@@ -32,7 +32,8 @@ export async function generateImage(record, ctx) {
           prompt:              ctx.visual,
           aspect_ratio:        aspectRatio,
           model:               'V_2',
-          magic_prompt_option: 'OFF', // prompt already crafted by Claude
+          style_type:          'REALISTIC',
+          magic_prompt_option: 'OFF',
         },
       }),
     });

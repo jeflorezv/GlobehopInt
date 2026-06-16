@@ -46,10 +46,10 @@ Elige el que mejor exprese cada slide. No repitas el mismo layout en slides cons
 
 ESPECIFICACIONES POR LAYOUT — respeta ESTRICTAMENTE los límites de caracteres (se renderiza en pantalla):
 hook       → headline: ≤50 chars   | subtext: ≤40 chars (opcional, null si no aplica)
-statement  → headline: ≤60 chars   | body: ≤100 chars (opcional)
+statement  → headline: ≤60 chars   | body: ≤75 chars (opcional) | tag: ≤20 chars (opcional, etiqueta Mint sobre el headline — ej: "VIDA", "TRABAJO", "PROCESO", "VISA")
 list       → headline: ≤45 chars   | items: array de 3-4 strings, c/u ≤35 chars
-fact       → headline: ≤40 chars (opcional) | stat: ≤8 chars | statLabel: ≤35 chars | body: ≤80 chars (opcional)
-cta        → headline: ≤45 chars (opcional) | keyword: nombre del destino en MAYÚSCULAS | offer: ≤25 chars
+fact       → headline: ≤40 chars (opcional) | stat: ≤8 chars | statLabel: ≤35 chars | body: ≤55 chars (opcional)
+cta        → headline: ≤55 chars | keyword: nombre del destino en MAYÚSCULAS | offer: ≤30 chars | savePrompt: ≤55 chars
 
 SLIDES FIJOS:
 - Slide 1: layout siempre "hook"
@@ -58,6 +58,20 @@ SLIDES FIJOS:
 REGLAS DE CONTENIDO
 - Textos en español. Sin él/ella — usa "tú" o formas neutras.
 - Headlines sin puntuación extraña al final — se ven mejor en negrita sin punto ni coma
+- COSTOS Y FONDOS: si mencionas cifras de dinero, siempre expresa en pesos colombianos (COP) y añade "aprox." antes del valor. Ejemplo: "aprox. $15.000.000 COP". Nunca menciones valores exactos — aclara que el monto real se define en la asesoría gratuita con GlobeHop.
+- HOOKS (slide 1): abre con paradoja, contraste o lo que nadie dice. No empieces con el nombre del destino. Buenos ejemplos: "Lo que aprendes en Dubái va más allá del inglés", "El destino más subestimado para aprender inglés", "Muchos piensan en estudiar inglés. Pocos consideran esto".
+- LISTAS: usa ✖ al inicio de cada ítem cuando el slide muestra errores o mitos; usa ✓ cuando muestra soluciones o checklists. El símbolo va siempre dentro del texto del ítem. Ejemplo de error: "✖ Fondos depositados a último momento". Ejemplo de solución: "✓ Carta de intención clara".
+- SLIDE 5: siempre es la "solución" — da valor real antes del CTA. Usa layout "list" con ítems ✓. Los pasos deben ser aplicables a cualquier estudiante (no solo menores): documentación, presupuesto, timing, asesoría. Evita ítems específicos de menores de edad.
+- ESTADÍSTICAS DE INMERSIÓN: nunca uses horas específicas (como "8 hrs de inglés al día"). Prefiere afirmaciones cualitativas: "Inmersión total en inglés", "Practica inglés dentro y fuera del aula".
+- TAG en statement slides: usa el campo 'tag' para añadir una etiqueta Mint corta y en mayúsculas que contextualice el headline (ej: "TRABAJO", "VIDA", "PROCESO", "VISA"). Úsalo en 1-2 slides statement por carrusel donde añada contexto real.
+- CTA (slide 6): headline interrogativo ("¿Quieres aplicar a [DESTINO] sin errores?"). savePrompt con dos frases: guardar + compartir ("Guarda este carrusel · Compártelo con alguien que quiera estudiar").
+
+IMAGE PROMPTS (imagePrompt por slide, en inglés para Ideogram)
+Cada slide tendrá una fotografía de fondo con overlay oscuro — elige escenas con profundidad de campo, cielos abiertos o composiciones claras donde el texto superpuesto sea legible.
+- Slide 1: vista panorámica o icónica del destino, hora dorada o luz dramática
+- Slides 2-5: siempre incluye personas — estudiante en campus o aula, familia en reunión de asesoría, joven en aeropuerto o calle de la ciudad, profesional en clase. Combina el entorno del destino con presencia humana real.
+- Slide 6: escena aspiracional — estudiante celebrando con bandera del país, skyline al atardecer, o campus con jóvenes felices
+Estilo fotográfico: documentary style, photojournalistic lighting, natural skin texture, visible pores. Evita: perfect skin, beauty photography, ultra attractive faces, AI-looking people. Sin texto ni logos. 2-3 oraciones en inglés.
 
 RESPONDE SOLO CON JSON VÁLIDO, sin texto antes ni después:
 {
@@ -66,12 +80,12 @@ RESPONDE SOLO CON JSON VÁLIDO, sin texto antes ni después:
   "templateName": "Destination Discovery",
   "keyword": "IRLANDA",
   "slides": [
-    { "slideNumber": 1, "layout": "hook", "headline": "...", "subtext": "..." },
-    { "slideNumber": 2, "layout": "list", "headline": "...", "items": ["...", "...", "..."] },
-    { "slideNumber": 3, "layout": "fact", "headline": "...", "stat": "...", "statLabel": "...", "body": "..." },
-    { "slideNumber": 4, "layout": "statement", "headline": "...", "body": "..." },
-    { "slideNumber": 5, "layout": "statement", "headline": "..." },
-    { "slideNumber": 6, "layout": "cta", "headline": "...", "keyword": "IRLANDA", "offer": "Consulta gratuita" }
+    { "slideNumber": 1, "layout": "hook", "headline": "...", "subtext": "...", "imagePrompt": "Aerial view of Dublin city centre at golden hour, River Liffey and Ha'penny Bridge visible, warm light, editorial travel photography" },
+    { "slideNumber": 2, "layout": "list", "headline": "...", "items": ["...", "...", "..."], "imagePrompt": "..." },
+    { "slideNumber": 3, "layout": "fact", "headline": "...", "stat": "...", "statLabel": "...", "body": "...", "imagePrompt": "..." },
+    { "slideNumber": 4, "layout": "statement", "tag": "TRABAJO", "headline": "...", "body": "...", "imagePrompt": "..." },
+    { "slideNumber": 5, "layout": "list", "headline": "...", "items": ["✓ ...", "✓ ...", "✓ ..."], "imagePrompt": "..." },
+    { "slideNumber": 6, "layout": "cta", "headline": "¿Quieres aplicar a IRLANDA sin errores?", "keyword": "IRLANDA", "offer": "Revisamos tu caso gratis", "savePrompt": "Guarda este carrusel · Compártelo con alguien que quiera estudiar", "imagePrompt": "..." }
   ]
 }`.trim();
 

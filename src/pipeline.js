@@ -196,10 +196,14 @@ async function persistStep(stepName, tipo, recordId, ctx) {
       return saveStep(recordId, 'humanize', { 'Caption generado': ctx.caption });
 
     case 'render': {
-      const previewUrl = ctx.slides?.[0]?.imageUrl;
+      const slides      = ctx.slides ?? [];
+      const previewUrl  = slides[0]?.imageUrl;
+      const hookHeadline = slides[0]?.headline ?? '';
       return saveStep(recordId, 'render', {
-        'Slides JSON': JSON.stringify(ctx.slides ?? []),
-        ...(previewUrl ? { 'Imagen preview': [{ url: previewUrl }] } : {}),
+        'Slides JSON':        JSON.stringify(slides),
+        'Hook':               hookHeadline,
+        'URL imagen branded': previewUrl ?? '',
+        'Imagen preview':     slides.filter(s => s.imageUrl).map(s => ({ url: s.imageUrl })),
       });
     }
 

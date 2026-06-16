@@ -28,7 +28,11 @@ const TABLE_FIELDS = [
     { name: 'estudiantes_secundaria' }, { name: 'universitarios' },
     { name: 'padres' },                 { name: 'profesionales' }, { name: 'adultos' },
   ]}},
-  { name: 'Destino/Tema',        type: 'singleLineText' },
+  { name: 'Destino/Tema', type: 'singleSelect', options: { choices: [
+    { name: 'Australia' }, { name: 'Malta' },   { name: 'España' },
+    { name: 'Dubai' },     { name: 'Irlanda' }, { name: 'Canadá' },
+    { name: 'Estados Unidos' },
+  ]}},
   { name: 'CTA',                 type: 'singleSelect', options: { choices: [
     { name: 'Agenda tu consultoría gratuita' },
     { name: 'Escríbenos por DM' },
