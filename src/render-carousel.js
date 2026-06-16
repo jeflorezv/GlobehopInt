@@ -43,7 +43,7 @@ export async function renderCarousel(record, ctx) {
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
-    await page.setViewport({ width: 1080, height: 1080, deviceScaleFactor: 1 });
+    await page.setViewport({ width: 1080, height: 1350, deviceScaleFactor: 1 });
 
     const rendered = [];
     for (let i = 0; i < slides.length; i++) {
@@ -81,7 +81,7 @@ async function generateBackground(prompt) {
       body: JSON.stringify({
         image_request: {
           prompt,
-          aspect_ratio:        'ASPECT_1_1',
+          aspect_ratio:        'ASPECT_3_4',
           model:               'V_2',
           style_type:          'REALISTIC',
           magic_prompt_option: 'OFF',
@@ -201,7 +201,7 @@ function hookHtml(s, total, bgB64) {
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><style>
   ${fonts()}
   body {
-    width:1080px; height:1080px; overflow:hidden;
+    width:1080px; height:1350px; overflow:hidden;
     position:relative; display:flex; flex-direction:column;
     ${bgStyle(bgB64)}
   }
@@ -247,7 +247,7 @@ function statementHtml(s, total, bgB64) {
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><style>
   ${fonts()}
   body {
-    width:1080px; height:1080px; overflow:hidden;
+    width:1080px; height:1350px; overflow:hidden;
     position:relative; display:flex; flex-direction:column;
     ${bgStyle(bgB64)}
   }
@@ -324,7 +324,7 @@ function listHtml(s, total, bgB64) {
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><style>
   ${fonts()}
   body {
-    width:1080px; height:1080px; overflow:hidden;
+    width:1080px; height:1350px; overflow:hidden;
     position:relative; display:flex; flex-direction:column;
     ${bgStyle(bgB64)}
   }
@@ -357,7 +357,7 @@ function factHtml(s, total, bgB64) {
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><style>
   ${fonts()}
   body {
-    width:1080px; height:1080px; overflow:hidden;
+    width:1080px; height:1350px; overflow:hidden;
     position:relative; display:flex; flex-direction:column;
     ${bgStyle(bgB64)}
   }
@@ -408,7 +408,7 @@ function ctaHtml(s, total, bgB64) {
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><style>
   ${fonts()}
   body {
-    width:1080px; height:1080px; overflow:hidden;
+    width:1080px; height:1350px; overflow:hidden;
     position:relative; display:flex; flex-direction:column;
     ${bgStyle(bgB64)}
   }
