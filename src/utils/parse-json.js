@@ -24,7 +24,50 @@ export function parseJson(raw, context = 'generate') {
 
   try { return JSON.parse(repairJsonStrings(extracted)); } catch {}
 
+  // Last resort: convert typographic/curly quotes to their Unicode forms and retry.
+  // Claude sometimes emits ASCII " inside string values (e.g. quoted dialogue in captions)
+  // which breaks all prior parse attempts. Replacing them with curly quotes makes the
+  // JSON structurally valid while preserving the visual intent.
+  try { return JSON.parse(repairJsonStrings(replaceInnerQuotes(extracted))); } catch {}
+
   throw new Error(`${context}: unparseable Claude response:\n${extracted.slice(0, 800)}`);
+}
+
+/**
+ * Replaces ASCII double-quote characters that appear INSIDE JSON string values
+ * with Unicode left/right double quotation marks (“ / ”), making the
+ * JSON structurally parseable without losing the visual intent of quoted speech.
+ *
+ * Works by scanning character-by-character: when inside a string, an unescaped
+ * " is replaced with " (open) or " (close) based on alternating position.
+ */
+function replaceInnerQuotes(str) {
+  let out   = '';
+  let inStr = false;
+  let quoteOpen = false;
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (inStr) {
+      if (c === '\\') {
+        out += c;
+        if (i + 1 < str.length) out += str[++i];
+      } else if (c === '"') {
+        // Closing delimiter of this string value
+        out += c;
+        inStr    = false;
+        quoteOpen = false;
+      } else if (c === '"') { // raw ASCII " inside a string — replace
+        out   += quoteOpen ? '”' : '“';
+        quoteOpen = !quoteOpen;
+      } else {
+        out += c;
+      }
+    } else {
+      if (c === '"') inStr = true;
+      out += c;
+    }
+  }
+  return out;
 }
 
 /**
