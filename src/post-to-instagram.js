@@ -77,8 +77,11 @@ async function postCarousel(record) {
 async function createChildContainer(imageUrl) {
   if (!imageUrl) throw new Error('post-to-instagram: carousel slide missing imageUrl');
 
+  // Instagram requires JPEG for carousel items — convert Cloudinary PNGs on the fly
+  const jpegUrl = imageUrl.replace(/\.png(\?.*)?$/, '.jpg$1');
+
   const { id } = await graphPost(`/${ACCOUNT()}/media`, {
-    image_url:        imageUrl,
+    image_url:        jpegUrl,
     is_carousel_item: true,
   });
   return id;
