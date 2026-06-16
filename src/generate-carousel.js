@@ -49,7 +49,7 @@ hook       → headline: ≤50 chars   | subtext: ≤40 chars (opcional, null si
 statement  → headline: ≤60 chars   | body: ≤75 chars (opcional) | tag: ≤20 chars (opcional, etiqueta Mint sobre el headline — ej: "VIDA", "TRABAJO", "PROCESO", "VISA")
 list       → headline: ≤45 chars   | items: array de 3-4 strings, c/u ≤35 chars
 fact       → headline: ≤40 chars (opcional) | stat: ≤8 chars | statLabel: ≤35 chars | body: ≤55 chars (opcional)
-cta        → headline: ≤55 chars | keyword: nombre del destino en MAYÚSCULAS | offer: ≤30 chars | savePrompt: ≤55 chars
+cta        → headline: ≤55 chars | keyword: nombre del destino en MAYÚSCULAS | action: ≤25 chars (verbo de acción claro — ej: "Escríbenos por DM hoy", "Escríbenos al WhatsApp", "Link en bio →") | offer: ≤30 chars | savePrompt: ≤55 chars
 
 SLIDES FIJOS:
 - Slide 1: layout siempre "hook"
@@ -85,7 +85,7 @@ RESPONDE SOLO CON JSON VÁLIDO, sin texto antes ni después:
     { "slideNumber": 3, "layout": "fact", "headline": "...", "stat": "...", "statLabel": "...", "body": "...", "imagePrompt": "..." },
     { "slideNumber": 4, "layout": "statement", "tag": "TRABAJO", "headline": "...", "body": "...", "imagePrompt": "..." },
     { "slideNumber": 5, "layout": "list", "headline": "...", "items": ["✓ ...", "✓ ...", "✓ ..."], "imagePrompt": "..." },
-    { "slideNumber": 6, "layout": "cta", "headline": "¿Quieres aplicar a IRLANDA sin errores?", "keyword": "IRLANDA", "offer": "Revisamos tu caso gratis", "savePrompt": "Guarda este carrusel · Compártelo con alguien que quiera estudiar", "imagePrompt": "..." }
+    { "slideNumber": 6, "layout": "cta", "headline": "¿Quieres aplicar a IRLANDA sin errores?", "keyword": "IRLANDA", "action": "Escríbenos por DM hoy", "offer": "Revisamos tu caso gratis", "savePrompt": "Guarda este carrusel · Compártelo con alguien que quiera estudiar", "imagePrompt": "..." }
   ]
 }`.trim();
 

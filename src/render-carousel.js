@@ -415,10 +415,10 @@ function ctaHtml(s, total, bgB64) {
   .top  { position:relative; z-index:1; display:flex; justify-content:space-between; align-items:flex-start; padding:44px 44px 0; }
   .layer {
     position:relative; z-index:1; flex:1;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    text-align:center; padding:0 60px;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+    text-align:center; padding:0 60px 80px;
   }
-  .divider { width:64px; height:4px; background:${C.MINT}; border-radius:2px; margin:0 auto 48px; }
+  .divider { width:64px; height:4px; background:${C.MINT}; border-radius:2px; margin:0 auto 36px; }
   .headline {
     font-family:'Poppins',sans-serif; font-weight:700;
     font-size:30px; color:rgba(255,255,255,0.85);
@@ -432,9 +432,16 @@ function ctaHtml(s, total, bgB64) {
     text-shadow: 0 2px 24px rgba(0,0,0,0.5);
   }
   .guild  { color:${C.MINT}; }
+  .action {
+    font-family:'Nexa',sans-serif; font-weight:900;
+    font-size:38px; color:${C.WHITE};
+    background:${C.MINT}; border-radius:12px;
+    padding:14px 40px; margin-bottom:24px;
+    text-shadow:none; letter-spacing:0.5px;
+  }
   .offer  {
     font-family:'Poppins',sans-serif; font-weight:700;
-    font-size:28px; color:${C.MINT};
+    font-size:24px; color:rgba(255,255,255,0.75);
   }
   .offer-line { width:100px; height:3px; background:${C.MINT}; border-radius:2px; margin:12px auto 0; }
   .save-prompt {
@@ -444,12 +451,13 @@ function ctaHtml(s, total, bgB64) {
   }
   .bar { position:absolute; bottom:0; left:0; right:0; height:8px; background:${C.MINT}; z-index:2; }
 </style></head><body>
-  ${overlay('rgba(18,26,36,0.55)')}
+  ${overlay('rgba(18,26,36,0.62)')}
   <div class="top">${logoPill()} ${chip(s.slideNumber, total)}</div>
   <div class="layer">
     <div class="divider"></div>
     ${s.headline ? `<div class="headline">${esc(s.headline)}</div>` : ''}
     <div class="kw"><span class="guild">«</span>${esc(s.keyword)}<span class="guild">»</span></div>
+    ${s.action ? `<div class="action">${esc(s.action)}</div>` : ''}
     <div class="offer">${esc(s.offer ?? 'Revisamos tu caso gratis')}</div>
     <div class="offer-line"></div>
     ${s.savePrompt ? `<div class="save-prompt">${esc(s.savePrompt)}</div>` : ''}
