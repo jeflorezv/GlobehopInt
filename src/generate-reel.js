@@ -110,9 +110,9 @@ async function pollUntilDone(taskId) {
 }
 
 // Derives a motion description from the static image prompt.
-// Keeps motion subtle — jarring movement looks unprofessional for educational content.
+// Micro-motion only — the face must stay still to avoid Kling facial artifacts.
 function motionPrompt(visualPrompt) {
-  return `${visualPrompt} Cinematic portrait video. Subtle breathing and natural posture only — no expression changes, no smile morphing, no facial drift between frames. Hair stays natural and still. Realistic eye blink, no exaggerated movement. Slow cinematic push-in or gentle pan. Calm, professional, lifelike.`;
+  return `${visualPrompt} Realistic human movement, documentary style. MICRO MOTION ONLY: subtle breathing, natural eye blink, very gentle head sway, light hair movement from breeze. NO talking, NO laughing, NO smiling changes, NO expression morphing, NO large head movement, NO animated gestures. Face stays natural and static throughout. Slow cinematic push-in or gentle pan. High realism, no exaggerated facial expressions, no AI artifacts.`;
 }
 
 function sleep(ms) {

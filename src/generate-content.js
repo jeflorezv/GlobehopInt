@@ -49,7 +49,9 @@ Rules: don't open the caption with GlobeHop — weave it naturally into the body
 ---
 
 LANGUAGE
-Write all captions in Spanish, Latin American register, Colombian tone, using "tú". Be warm, inspirational, and aspirational — never corporate or pushy.
+Write in natural Colombian Spanish — never translate from English. Use "tú", Colombian cadence and expressions. Sound like a knowledgeable friend who has studied abroad: warm, inspirational, aspirational — never corporate or pushy.
+
+Scene overlay text (the "text" field in each reel scene) must read as a Colombian would actually say it out loud: short, punchy, emotionally real. Avoid corporate taglines and Google-Translate phrasing. Right tone examples: "¿Y si fuera tu turno?", "Hace un año esto era un sueño", "Así suena una vida diferente", "Ya no esperes más el momento perfecto", "Un vuelo lo cambió todo".
 
 ---
 
@@ -149,9 +151,9 @@ Rules:
 
 VISUAL PROMPT RULES
 Write an Ideogram image prompt in English. Follow the GlobeHop visual style:
-- Bright natural light, real-looking people (not obvious stock photo poses), modern architecture, clean compositions, warm skin tones. Premium but approachable.
-- Photorealistic, professional photography. Magazine or editorial quality.
-- Ultra-sharp portrait photography. Natural skin texture with visible detail. Individual hair strands clearly rendered. No AI-smoothed skin. No heavy bokeh blur.
+- Documentary photography, photojournalistic style, 35mm lens, natural lighting. Real skin texture with visible pores and natural imperfections. Realistic clothing folds, visible fabric texture. Authentic candid moment — not a posed stock photo. Premium educational campaign quality.
+- NEVER use these words (they trigger AI-looking faces): perfect skin, ultra beautiful, glamorous, fashion photography, beauty portrait, flawless, luxury model, smooth skin, perfect lighting, ultra attractive.
+- Ultra-sharp detail. Individual hair strands clearly rendered. No AI-smoothed skin. No heavy bokeh blur. Subject sharp, background landmark clearly identifiable.
 - The image must INSTANTLY communicate the destination and motivate a young Colombian to move there.
 
 DESTINATION ANCHORING — always use an iconic, unmistakable landmark:
@@ -192,13 +194,26 @@ Write 2–3 sentences: scene + mood + specific detail that makes it feel real.
 
 ---
 
+REEL CHARACTER LOCK (mandatory for every reel post — applied before writing any scene visual)
+Pick ONE character who appears across all 4 scenes. Decide these details once, then copy them verbatim into every scene visual prompt — never vary them between scenes:
+- Gender: follow GENDER CONSISTENCY rules above
+- Age: pick exactly one: 23, 26, or 29
+- Hair: one specific description — e.g. "dark brown wavy hair to her shoulders", "short black straight hair", "curly dark hair"
+- Build: "athletic build" or "slim build"
+- Expression: neutral confident expression — NOT laughing, NOT talking, NOT mid-smile transition. A quiet, natural look that stays still under video generation.
+- Clothing palette: one consistent casual outfit matching the destination climate (keep the same palette across all 4 scenes)
+
+Copy the exact same age + hair + build into EVERY scene visual prompt. The viewer must recognize the same person from scene 1 through scene 4.
+
+---
+
 REEL SCENES (only for "reel" post type — omit the "scenes" key entirely for single_photo and carousel)
 
 For reels, generate 4 separate Ideogram visual prompts for the 4-scene video structure.
 Each prompt becomes a distinct Kling AI video clip of 2.5 seconds.
 
 Scene roles:
-  scene_hook:         The opening hook shot. Student in an aspirational moment near the iconic destination landmark. Same emotional register as the main "visual" field, but leave breathing room in the frame — the person should have space to make subtle movement. This scene receives the hook text overlay.
+  scene_hook:         The opening hook shot. Student walking TOWARD the iconic destination landmark — movement shots produce far more natural Kling results than standing poses and reduce facial artifact risk. Leave breathing room in the frame. The landmark must be unmistakably visible in the background. This scene receives the hook text overlay.
   scene_study:        Academic context. Student inside Trinity College library or reading room, in a campus café studying with books and laptop, or arriving at a modern university building with a backpack. Educational, focused, purposeful.
   scene_student_life: Social/cultural scene. 2–3 multicultural students together on campus grass, exploring the city on foot, laughing at a café. Warm, genuine, "this could be your life" energy.
   scene_cta:          Call-to-action scene. Single student smiling directly toward camera with the iconic destination landmark clearly visible behind them. Warm, confident, approachable expression. This is the final scene that drives DM conversions — the face must feel trustworthy and inviting.
