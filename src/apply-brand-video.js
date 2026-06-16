@@ -184,8 +184,10 @@ async function findMusicTrack() {
   try {
     const files  = await readdir(MUSIC_DIR);
     const tracks = files.filter(f => /\.(mp3|m4a|aac)$/i.test(f));
-    if (tracks.length) console.log(`[brand-video] music track: ${tracks[0]}`);
-    return tracks.length ? path.join(MUSIC_DIR, tracks[0]) : null;
+    if (!tracks.length) return null;
+    const pick = tracks[Math.floor(Math.random() * tracks.length)];
+    console.log(`[brand-video] music track: ${pick}`);
+    return path.join(MUSIC_DIR, pick);
   } catch {
     return null;
   }

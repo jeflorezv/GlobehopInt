@@ -214,9 +214,9 @@ Each prompt becomes a distinct Kling AI video clip of 2.5 seconds.
 
 Scene roles:
   scene_hook:         The opening hook shot. Student walking TOWARD the iconic destination landmark — movement shots produce far more natural Kling results than standing poses and reduce facial artifact risk. Leave breathing room in the frame. The landmark must be unmistakably visible in the background. This scene receives the hook text overlay.
-  scene_study:        Academic context. Student inside Trinity College library or reading room, in a campus café studying with books and laptop, or arriving at a modern university building with a backpack. Educational, focused, purposeful.
-  scene_student_life: Social/cultural scene. 2–3 multicultural students together on campus grass, exploring the city on foot, laughing at a café. Warm, genuine, "this could be your life" energy.
-  scene_cta:          Call-to-action scene. Single student smiling directly toward camera with the iconic destination landmark clearly visible behind them. Warm, confident, approachable expression. This is the final scene that drives DM conversions — the face must feel trustworthy and inviting.
+  scene_study:        Academic context. Student viewed FROM BEHIND or from the side — seated at a desk or table looking out a large window, or entering a university building with a backpack. NO hands holding objects in the foreground. Hands must be resting flat on the table, tucked in a bag strap, or completely out of frame. Educational, focused, purposeful.
+  scene_student_life: Social/cultural scene. 2–3 students standing together looking at a view or landmark FROM BEHIND or from the side — NOT sitting with hands in lap. Arms around shoulders or hands in pockets. Standing shots eliminate hand-in-lap artifacts. Warm, genuine, "this could be your life" energy.
+  scene_cta:          Call-to-action scene. Single student facing the camera FRONT-ON — standing straight, arms relaxed at sides or hands in jacket pockets, landmark clearly visible behind. NO over-the-shoulder twist poses (they create phantom limb artifacts when animated). Warm, confident, natural smile.
 
 Each scene MUST include two fields:
   visual: Ideogram prompt in English (2–3 sentences: setting + mood + one specific visual detail)

@@ -5,6 +5,13 @@ const BASE_URL         = process.env.KLING_API_BASE_URL ?? 'https://api.klingai.
 const POLL_INTERVAL_MS = 15_000; // 15 s between polls
 const MAX_POLLS        = 20;     // 5-minute window total (Kling v1 typically needs 2–4 min)
 
+const NEGATIVE_PROMPT =
+  'warped hands, fused fingers, extra fingers, melted fingers, missing fingers, ' +
+  'floating limbs, phantom limbs, detached body parts, disembodied arm, ' +
+  'morphing background, melting architecture, shifting buildings, unstable background, ' +
+  'deformed face, distorted eyes, morphing smile, facial drift, expression change, ' +
+  'camera shake, camera pan, camera zoom, camera movement, unstable camera';
+
 function klingJwt() {
   const header  = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const now     = Math.floor(Date.now() / 1000);
@@ -48,12 +55,13 @@ async function submitTask(imageUrl, visualPrompt) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model_name: 'kling-v1',
-        image:      imageUrl,
-        prompt:     motionPrompt(visualPrompt),
-        duration:   '5',
-        mode:       'std',
-        cfg_scale:  0.3,
+        model_name:      'kling-v1',
+        image:           imageUrl,
+        prompt:          motionPrompt(visualPrompt),
+        negative_prompt: NEGATIVE_PROMPT,
+        duration:        '5',
+        mode:            'std',
+        cfg_scale:       0.3,
       }),
     });
 
@@ -109,10 +117,19 @@ async function pollUntilDone(taskId) {
   throw new Error(`Kling: task ${taskId} timed out after ${elapsed}s`);
 }
 
-// Derives a motion description from the static image prompt.
-// Micro-motion only — the face must stay still to avoid Kling facial artifacts.
+// Derives a Kling motion prompt from the static image.
+// CAMERA LOCKED = prevents background morph artifacts.
+// Hands/fingers explicit = prevents finger-fusion blobs.
+// No facial movement = prevents face drift and expression morphing.
 function motionPrompt(visualPrompt) {
-  return `${visualPrompt} Realistic human movement, documentary style. MICRO MOTION ONLY: subtle breathing, natural eye blink, very gentle head sway, light hair movement from breeze. NO talking, NO laughing, NO smiling changes, NO expression morphing, NO large head movement, NO animated gestures. Face stays natural and static throughout. Slow cinematic push-in or gentle pan. High realism, no exaggerated facial expressions, no AI artifacts.`;
+  return (
+    `${visualPrompt} ` +
+    'CAMERA FULLY LOCKED — absolutely no pan, no zoom, no push-in, no camera movement whatsoever. ' +
+    'Micro motion only on the subject: subtle breathing, gentle natural blink, very slight hair movement from a soft breeze. ' +
+    'Hands completely still and relaxed — no gesturing, no gripping, fingers not animated. ' +
+    'Face stays neutral and natural — no talking, no laughing, no smiling changes, no expression morphing. ' +
+    'Background is completely static. Documentary realism, no AI artifacts.'
+  );
 }
 
 function sleep(ms) {
