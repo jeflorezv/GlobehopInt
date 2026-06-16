@@ -10,6 +10,11 @@ const ASSETS       = path.resolve(__dirname, '../assets');
 const FONTS_DIR    = path.join(ASSETS, 'fonts');
 const IDEOGRAM_URL = 'https://api.ideogram.ai/generate';
 
+const NEGATIVE_PROMPT =
+  'text, watermark, logo, overlay, smooth plastic skin, airbrushed skin, overly perfect skin, ' +
+  'stock photo aesthetic, generic corporate photography, artificial studio lighting, CGI look, ' +
+  'oversaturated HDR, illustration, painting, cartoon, 3D render, blurry background, heavy bokeh';
+
 // Loaded once at startup and cached for all render calls.
 const [NEXA_HEAVY, NEXA_LIGHT, POPPINS_BOLD, LOGO_B64, ICON_B64] = await Promise.all([
   readFile(path.join(FONTS_DIR, 'Nexa-Heavy.ttf')).then(b => b.toString('base64')),
@@ -81,8 +86,9 @@ async function generateBackground(prompt) {
       body: JSON.stringify({
         image_request: {
           prompt,
+          negative_prompt:     NEGATIVE_PROMPT,
           aspect_ratio:        'ASPECT_3_4',
-          model:               'V_2',
+          model:               'V_3',
           style_type:          'REALISTIC',
           magic_prompt_option: 'OFF',
         },

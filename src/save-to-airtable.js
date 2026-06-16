@@ -108,3 +108,42 @@ export async function markError(recordId, stepName, message) {
   });
 }
 
+/**
+ * Sets Estado to 'Omitir' — skips the record in all future pipeline runs.
+ * Used by the review dashboard reject action.
+ */
+export async function markOmitir(recordId) {
+  await patchRecord(recordId, { Estado: 'Omitir' });
+}
+
+/**
+ * Fetches all records currently in 'Pendiente revisión' state, sorted by
+ * publication date. Used by the review dashboard to list content awaiting approval.
+ *
+ * @returns {Promise<Array>} Array of Airtable record objects ({ id, fields })
+ */
+export async function fetchPendingRecords() {
+  return withRetry(async () => {
+    const params = new URLSearchParams();
+    params.set('filterByFormula', "{Estado}='Pendiente revisión'");
+    params.set('sort[0][field]', 'Fecha publicación');
+    params.set('sort[0][direction]', 'asc');
+    for (const f of [
+      'Tipo de post', 'Destino/Tema', 'Fecha publicación', 'Estado',
+      'URL imagen branded', 'URL imagen', 'Caption generado', 'Hook',
+      'URL Video', 'Slides JSON',
+    ]) params.append('fields[]', f);
+
+    const resp = await fetch(`${tableUrl()}?${params}`, { headers: authHeaders() });
+    if (!resp.ok) {
+      const body = await resp.text();
+      console.error(`[airtable] list pending ${resp.status} body:`, body);
+      const err  = new Error(`Airtable list failed (HTTP ${resp.status})`);
+      err.status = resp.status;
+      throw err;
+    }
+    const json = await resp.json();
+    return json.records ?? [];
+  });
+}
+

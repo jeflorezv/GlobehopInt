@@ -8,6 +8,11 @@ const ASPECT_RATIO = {
   reel:         'ASPECT_9_16',
 };
 
+const NEGATIVE_PROMPT =
+  'text, watermark, logo, overlay, smooth plastic skin, airbrushed skin, overly perfect skin, ' +
+  'stock photo aesthetic, generic corporate photography, artificial studio lighting, CGI look, ' +
+  'oversaturated HDR, illustration, painting, cartoon, 3D render, blurry background, heavy bokeh';
+
 /**
  * Generates a single image via Ideogram from the visual prompt in ctx.
  * Used for single_photo and reel post types.
@@ -30,8 +35,9 @@ export async function generateImage(record, ctx) {
       body: JSON.stringify({
         image_request: {
           prompt:              ctx.visual,
+          negative_prompt:     NEGATIVE_PROMPT,
           aspect_ratio:        aspectRatio,
-          model:               'V_2',
+          model:               'V_3',
           style_type:          'REALISTIC',
           magic_prompt_option: 'OFF',
         },
