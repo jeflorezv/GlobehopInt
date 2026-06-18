@@ -1,0 +1,13 @@
+.DS_Store
+*.docx
+plan_automatizacion_instagram.md
+LOGO - GLOBEHOP_Fondo Blanco.png
+assets/music
+scripts/demo-week.js
+scripts/reset-airtable.js
+scripts/setup-airtable.js
+scripts/migrate-destino-field.js
+.claude
+.superpowers
+Review
+Review/

@@ -478,8 +478,29 @@ function recordDetailHtml(recordId, record, token, req = {}) {
     try { slides = JSON.parse(record['Slides JSON'] ?? '[]'); } catch {}
     const withImg = slides.filter(s => s.imageUrl);
     if (withImg.length) {
-      const imgs = withImg.map(s => `<img src="${esc(s.imageUrl)}" alt="Slide" loading="lazy">`).join('');
-      mediaHtml = `<div class="slides">${imgs}</div>`;
+      const urls = JSON.stringify(withImg.map(s => s.imageUrl));
+      mediaHtml = `
+<div class="cv-wrap">
+  <div class="cv-stage">
+    <img id="cv-img" src="${esc(withImg[0].imageUrl)}" alt="Slide 1">
+    <button class="cv-btn cv-prev" onclick="cvNav(-1)">&#8249;</button>
+    <button class="cv-btn cv-next" onclick="cvNav(1)">&#8250;</button>
+    <div class="cv-counter"><span id="cv-n">1</span> / ${withImg.length}</div>
+  </div>
+  <div class="cv-dots" id="cv-dots">${withImg.map((_, i) => `<span class="cv-dot${i===0?' cv-dot-on':''}" onclick="cvGo(${i})"></span>`).join('')}</div>
+</div>
+<script>
+(function(){
+  var urls=${urls}, cur=0;
+  window.cvNav=function(d){cvGo((cur+d+urls.length)%urls.length);};
+  window.cvGo=function(n){
+    cur=n;
+    document.getElementById('cv-img').src=urls[n];
+    document.getElementById('cv-n').textContent=n+1;
+    document.querySelectorAll('.cv-dot').forEach(function(d,i){d.className='cv-dot'+(i===n?' cv-dot-on':'');});
+  };
+})();
+</script>`;
     } else if (imgUrl) {
       mediaHtml = `<div class="media"><img src="${esc(imgUrl)}" alt="${esc(dest)}"></div>`;
     }
@@ -537,9 +558,16 @@ ${BASE_CSS}
 .media{border-radius:12px;overflow:hidden;margin-bottom:18px;background:#161b22}
 .media img{display:block;width:100%}
 .media video{display:block;width:100%;max-height:70vh;object-fit:contain;background:#000}
-.slides{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:18px;scrollbar-width:thin}
-.slides img{height:140px;border-radius:10px;flex-shrink:0;border:2px solid transparent;cursor:pointer}
-.slides img:first-child{border-color:#44539D}
+.cv-wrap{margin-bottom:18px}
+.cv-stage{position:relative;border-radius:12px;overflow:hidden;background:#161b22;aspect-ratio:3/4}
+.cv-stage img{display:block;width:100%;height:100%;object-fit:cover}
+.cv-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.55);border:none;color:#fff;font-size:36px;line-height:1;padding:8px 14px;cursor:pointer;border-radius:8px;backdrop-filter:blur(4px);transition:background .15s}
+.cv-btn:hover{background:rgba(0,0,0,0.8)}
+.cv-prev{left:10px}.cv-next{right:10px}
+.cv-counter{position:absolute;bottom:12px;right:14px;background:rgba(0,0,0,0.55);color:#fff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:20px;backdrop-filter:blur(4px)}
+.cv-dots{display:flex;justify-content:center;gap:6px;padding:10px 0 4px}
+.cv-dot{width:8px;height:8px;border-radius:50%;background:#30363d;cursor:pointer;transition:background .15s}
+.cv-dot-on{background:#44539D}
 .hook{background:#1c2631;border-left:3px solid #44539D;border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:16px;font-size:15px;font-weight:600;line-height:1.6;white-space:pre-line}
 .caption-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#52525b;margin-bottom:8px}
 .caption{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:16px;font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word;color:#a1a1aa;max-height:280px;overflow-y:auto;margin-bottom:0}

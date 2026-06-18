@@ -1,11 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { withRetry } from './utils/retry.js';
 import { parseJson } from './utils/parse-json.js';
+import { pickAustraliaLocation } from './utils/australia-locations.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL  = 'claude-sonnet-4-6';
 
-// Mirrors generate-content.js — picked at code level so Claude cannot override.
+// LEGACY — kept only so the file parses; actual picking now done via shared singleton.
+// TODO: remove after next cleanup pass.
 const AUSTRALIA_LOCATIONS = [
   { city: 'Melbourne', landmark: 'Federation Square at dusk with Flinders Street Station and its ornate clocks across the tram intersection, warm city glow', exclude: '' },
   { city: 'Melbourne', landmark: "Hosier Lane, Melbourne's iconic street-art laneway, both walls covered in vivid graffiti, afternoon light filtering down", exclude: '' },
@@ -125,9 +127,7 @@ export async function generateCarousel(record, ctx) {
   const cta      = record['CTA']          ?? 'Escríbenos por DM';
 
   const isAustralia = /australia/i.test(destino);
-  const ausLoc = isAustralia
-    ? AUSTRALIA_LOCATIONS[Math.floor(Math.random() * AUSTRALIA_LOCATIONS.length)]
-    : null;
+  const ausLoc = isAustralia ? pickAustraliaLocation() : null;
 
   const userMessage = [
     `Destino: ${destino}`,

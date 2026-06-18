@@ -1,14 +1,15 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { withRetry } from './utils/retry.js';
 import { parseJson } from './utils/parse-json.js';
+import { pickAustraliaLocation } from './utils/australia-locations.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // Model specified in CLAUDE.md for this project
 const MODEL = 'claude-sonnet-4-6';
 
-// Picked at code level and injected into the user message — Claude cannot override.
-// Sydney has 3 entries (no Opera House / Harbour Bridge) out of 22 total (~14%).
+// LEGACY — kept only so the file parses; actual picking now done via shared singleton.
+// TODO: remove after next cleanup pass.
 const AUSTRALIA_LOCATIONS = [
   // Melbourne
   { city: 'Melbourne', landmark: 'Federation Square at dusk with Flinders Street Station and its ornate clocks across the tram intersection, warm city glow', exclude: '' },
@@ -297,9 +298,7 @@ export async function generateContent(record, ctx) {
   const aspect   = tipo === 'reel' ? '9:16 vertical' : '4:5';
 
   const isAustralia = /australia/i.test(tema ?? '');
-  const ausLoc = isAustralia
-    ? AUSTRALIA_LOCATIONS[Math.floor(Math.random() * AUSTRALIA_LOCATIONS.length)]
-    : null;
+  const ausLoc = isAustralia ? pickAustraliaLocation() : null;
 
   const userMessage = [
     `Post type: ${tipo} (${aspect} aspect ratio)`,
