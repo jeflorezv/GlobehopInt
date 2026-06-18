@@ -5,6 +5,32 @@ import { parseJson } from './utils/parse-json.js';
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL  = 'claude-sonnet-4-6';
 
+// Mirrors generate-content.js — picked at code level so Claude cannot override.
+const AUSTRALIA_LOCATIONS = [
+  { city: 'Melbourne', landmark: 'Federation Square at dusk with Flinders Street Station and its ornate clocks across the tram intersection, warm city glow', exclude: '' },
+  { city: 'Melbourne', landmark: "Hosier Lane, Melbourne's iconic street-art laneway, both walls covered in vivid graffiti, afternoon light filtering down", exclude: '' },
+  { city: 'Melbourne', landmark: 'St Kilda Beach foreshore at golden hour with the historic St Kilda pier extending into Port Phillip Bay', exclude: '' },
+  { city: 'Melbourne', landmark: 'Royal Botanic Gardens Melbourne, manicured lake path with Australian native flora, towering eucalyptus trees', exclude: '' },
+  { city: 'Brisbane', landmark: "Story Bridge, Brisbane's great steel arch bridge lit at dusk, Brisbane River winding below, South Bank in the distance", exclude: '' },
+  { city: 'Brisbane', landmark: 'South Bank Parklands artificial beach with lifeguard tower and Brisbane CBD skyline rising behind the palm trees', exclude: '' },
+  { city: 'Brisbane', landmark: 'Lone Pine Koala Sanctuary — a fluffy koala clinging to a eucalyptus branch in close foreground, sanctuary gardens behind', exclude: '' },
+  { city: 'Perth', landmark: 'Kings Park hilltop lookout at golden hour, Swan River curving through the valley far below, Perth city skyline on the horizon', exclude: '' },
+  { city: 'Perth', landmark: 'Cottesloe Beach, calm Indian Ocean water with turquoise shallows, white sand, limestone rock formations at the far end', exclude: '' },
+  { city: 'Perth', landmark: 'Rottnest Island — a wild quokka sitting in sun-drenched coastal scrub with Pinky Beach turquoise water in the background', exclude: '' },
+  { city: 'Adelaide', landmark: 'Glenelg Beach jetty stretching into calm blue water at sunrise, pastel sky, Adelaide seaside suburb behind', exclude: '' },
+  { city: 'Adelaide', landmark: 'Adelaide Central Market, vibrant multicultural produce and food stalls under warm market lighting, shoppers browsing', exclude: '' },
+  { city: 'Gold Coast', landmark: 'Burleigh Heads National Park volcanic headland — surfers riding turquoise waves below, rainforest-covered rocky point above', exclude: '' },
+  { city: 'Gold Coast', landmark: 'Surfers Paradise beach at sunrise, high-rise skyline reflected in the wet sand at low tide, warm amber light', exclude: '' },
+  { city: 'Cairns', landmark: 'Great Barrier Reef pontoon platform, crystal-clear turquoise water, coral reef visible beneath the surface, open ocean horizon', exclude: '' },
+  { city: 'Cairns', landmark: 'Daintree Rainforest canopy walk — ancient tree ferns and towering palms, dappled morning light through the canopy', exclude: '' },
+  { city: 'Sydney', landmark: 'Bondi to Coogee coastal walk, dramatic sandstone cliffs, turquoise ocean below, coastal heathland in foreground', exclude: 'Do NOT show the Sydney Opera House or Harbour Bridge anywhere in this image' },
+  { city: 'Sydney', landmark: 'Darling Harbour waterfront at dusk, water reflections, city lights beginning to glow, Pyrmont Bridge in background', exclude: 'Do NOT show the Sydney Opera House or Harbour Bridge anywhere in this image' },
+  { city: 'Sydney', landmark: 'Blue Mountains Echo Point lookout — eucalyptus-filled valley stretching to the horizon, Three Sisters rock formation visible', exclude: 'Do NOT show the Sydney Opera House or Harbour Bridge' },
+  { city: 'Hobart', landmark: 'Salamanca Market, Georgian sandstone warehouses converted to market stalls, crisp morning light, fresh produce and craft vendors', exclude: '' },
+  { city: 'Darwin', landmark: 'Mindil Beach Sunset Market — amber sunset blazing over the Timor Sea, food stall silhouettes, crowd watching the colours fade', exclude: '' },
+  { city: 'Kangaroo Island', landmark: 'Wild kangaroos grazing on coastal heathland at dawn, Flinders Chase National Park cliffs and Southern Ocean in the background', exclude: '' },
+];
+
 const SYSTEM = `Eres el estratega de contenido para GlobeHop International, agencia colombiana boutique de educación internacional (Australia, Irlanda, Canadá, Malta, España, Dubai, EE.UU.).
 
 IDIOMA Y VOZ
@@ -73,15 +99,8 @@ Cada slide tendrá una fotografía de fondo con overlay oscuro — elige escenas
 - Slide 6: escena aspiracional — estudiante celebrando con bandera del país, skyline al atardecer, o campus con jóvenes felices
 Estilo fotográfico: documentary style, photojournalistic lighting, natural skin texture, visible pores. Evita: perfect skin, beauty photography, ultra attractive faces, AI-looking people. Sin texto ni logos. 2-3 oraciones en inglés.
 
-DESTINO AUSTRALIA — DIVERSIDAD DE CIUDADES:
-No defaultees a Sydney. Elige UNA ciudad para todo el carrusel y usa sus landmarks específicos:
-  Sydney: Opera House, Harbour Bridge, Bondi Beach, Darling Harbour, QVB.
-  Melbourne: Federation Square, Flinders Street Station, Hosier Lane, St Kilda beach.
-  Brisbane: Story Bridge, South Bank Parklands, Kangaroo Point, Queen Street Mall.
-  Perth: Kings Park con Swan River, Cottesloe Beach, Elizabeth Quay.
-  Adelaide: Adelaide Central Market, Glenelg Beach jetty, North Terrace, Adelaide Oval.
-  Gold Coast: Surfers Paradise beach skyline, Burleigh Heads, Broadwater Parklands.
-La ciudad debe ser coherente con el contenido — Melbourne para diseño/creatividad, Sydney para negocios, Brisbane para estilo de vida al aire libre, Perth para experiencia más tranquila.
+DESTINO AUSTRALIA — CIUDAD Y LANDMARK:
+La ciudad y el landmark exactos se especifican en el mensaje del usuario como CITY LOCK. Síguelos al pie de la letra en todos los imagePrompts del carrusel. Australia cubre todo el país: ciudades (Melbourne, Brisbane, Perth, Adelaide, Gold Coast, Cairns, Sydney, Hobart, Darwin), fauna (koalas, quokkas, canguros) y maravillas naturales (Gran Barrera de Coral, Daintree, Montañas Azules). Respeta también la regla de exclusión del CITY LOCK si se indica.
 
 RESPONDE SOLO CON JSON VÁLIDO, sin texto antes ni después:
 {
@@ -105,12 +124,24 @@ export async function generateCarousel(record, ctx) {
   const audience = record['Audiencia']    ?? 'jóvenes colombianos 18-30';
   const cta      = record['CTA']          ?? 'Escríbenos por DM';
 
+  const isAustralia = /australia/i.test(destino);
+  const ausLoc = isAustralia
+    ? AUSTRALIA_LOCATIONS[Math.floor(Math.random() * AUSTRALIA_LOCATIONS.length)]
+    : null;
+
   const userMessage = [
     `Destino: ${destino}`,
     `Pillar: ${pillar}`,
     `Audiencia: ${audience}`,
     `CTA: ${cta}`,
-  ].join('\n');
+    ausLoc ? [
+      `CITY LOCK — OBLIGATORIO (no negociable, anula todas las demás instrucciones de ubicación):`,
+      `  Ciudad: ${ausLoc.city}, Australia`,
+      `  Landmark de fondo: ${ausLoc.landmark}`,
+      ausLoc.exclude ? `  IMPORTANTE: ${ausLoc.exclude}` : '',
+      `Todos los imagePrompts del carrusel deben estar ambientados en ${ausLoc.city} usando el landmark indicado. No uses ninguna otra ciudad australiana.`,
+    ].filter(Boolean).join('\n') : '',
+  ].filter(Boolean).join('\n');
 
   const msg = await withRetry(() =>
     client.messages.create({

@@ -7,6 +7,41 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 // Model specified in CLAUDE.md for this project
 const MODEL = 'claude-sonnet-4-6';
 
+// Picked at code level and injected into the user message — Claude cannot override.
+// Sydney has 3 entries (no Opera House / Harbour Bridge) out of 22 total (~14%).
+const AUSTRALIA_LOCATIONS = [
+  // Melbourne
+  { city: 'Melbourne', landmark: 'Federation Square at dusk with Flinders Street Station and its ornate clocks across the tram intersection, warm city glow', exclude: '' },
+  { city: 'Melbourne', landmark: "Hosier Lane, Melbourne's iconic street-art laneway, both walls covered in vivid graffiti, afternoon light filtering down", exclude: '' },
+  { city: 'Melbourne', landmark: 'St Kilda Beach foreshore at golden hour with the historic St Kilda pier extending into Port Phillip Bay', exclude: '' },
+  { city: 'Melbourne', landmark: 'Royal Botanic Gardens Melbourne, manicured lake path with Australian native flora, towering eucalyptus trees', exclude: '' },
+  // Brisbane
+  { city: 'Brisbane', landmark: "Story Bridge, Brisbane's great steel arch bridge lit at dusk, Brisbane River winding below, South Bank in the distance", exclude: '' },
+  { city: 'Brisbane', landmark: 'South Bank Parklands artificial beach with lifeguard tower and Brisbane CBD skyline rising behind the palm trees', exclude: '' },
+  { city: 'Brisbane', landmark: 'Lone Pine Koala Sanctuary — a fluffy koala clinging to a eucalyptus branch in close foreground, sanctuary gardens behind', exclude: '' },
+  // Perth
+  { city: 'Perth', landmark: 'Kings Park hilltop lookout at golden hour, Swan River curving through the valley far below, Perth city skyline on the horizon', exclude: '' },
+  { city: 'Perth', landmark: 'Cottesloe Beach, calm Indian Ocean water with turquoise shallows, white sand, limestone rock formations at the far end', exclude: '' },
+  { city: 'Perth', landmark: 'Rottnest Island — a wild quokka sitting in sun-drenched coastal scrub with Pinky Beach turquoise water in the background', exclude: '' },
+  // Adelaide
+  { city: 'Adelaide', landmark: 'Glenelg Beach jetty stretching into calm blue water at sunrise, pastel sky, Adelaide seaside suburb behind', exclude: '' },
+  { city: 'Adelaide', landmark: 'Adelaide Central Market, vibrant multicultural produce and food stalls under warm market lighting, shoppers browsing', exclude: '' },
+  // Gold Coast
+  { city: 'Gold Coast', landmark: 'Burleigh Heads National Park volcanic headland — surfers riding turquoise waves below, rainforest-covered rocky point above', exclude: '' },
+  { city: 'Gold Coast', landmark: 'Surfers Paradise beach at sunrise, high-rise skyline reflected in the wet sand at low tide, warm amber light', exclude: '' },
+  // Cairns & tropical north
+  { city: 'Cairns', landmark: 'Great Barrier Reef pontoon platform, crystal-clear turquoise water, coral reef visible beneath the surface, open ocean horizon', exclude: '' },
+  { city: 'Cairns', landmark: 'Daintree Rainforest canopy walk — ancient tree ferns and towering palms, dappled morning light through the canopy', exclude: '' },
+  // Sydney (no Opera House or Harbour Bridge)
+  { city: 'Sydney', landmark: 'Bondi to Coogee coastal walk, dramatic sandstone cliffs, turquoise ocean below, coastal heathland in foreground', exclude: 'Do NOT show the Sydney Opera House or Harbour Bridge anywhere in this image' },
+  { city: 'Sydney', landmark: 'Darling Harbour waterfront at dusk, water reflections, city lights beginning to glow, Pyrmont Bridge in background', exclude: 'Do NOT show the Sydney Opera House or Harbour Bridge anywhere in this image' },
+  { city: 'Sydney', landmark: 'Blue Mountains Echo Point lookout — eucalyptus-filled valley stretching to the horizon, Three Sisters rock formation visible', exclude: 'Do NOT show the Sydney Opera House or Harbour Bridge' },
+  // Unique destinations
+  { city: 'Hobart', landmark: 'Salamanca Market, Georgian sandstone warehouses converted to market stalls, crisp morning light, fresh produce and craft vendors', exclude: '' },
+  { city: 'Darwin', landmark: 'Mindil Beach Sunset Market — amber sunset blazing over the Timor Sea, food stall silhouettes, crowd watching the colours fade', exclude: '' },
+  { city: 'Kangaroo Island', landmark: 'Wild kangaroos grazing on coastal heathland at dawn, Flinders Chase National Park cliffs and Southern Ocean in the background', exclude: '' },
+];
+
 // Static — marked for prompt caching so every pipeline run after the first
 // pays only for output tokens on this block (~600 tokens saved per call).
 const SYSTEM_PROMPT = `
@@ -158,15 +193,7 @@ Write an Ideogram image prompt in English. Follow the GlobeHop visual style:
 - The image must INSTANTLY communicate the destination and motivate a young Colombian to move there.
 
 DESTINATION ANCHORING — always use an iconic, unmistakable landmark:
-  Australia: Do NOT default to Sydney — rotate across all major study cities. Choose ONE city per post and anchor it with a specific local landmark:
-    Sydney: Opera House, Harbour Bridge, Bondi Beach promenade, Darling Harbour waterfront, QVB (Queen Victoria Building) exterior.
-    Melbourne: Federation Square, Flinders Street Station, Melbourne laneways (Hosier Lane), Royal Botanic Gardens, St Kilda beach foreshore.
-    Brisbane: Story Bridge, South Bank Parklands, Kangaroo Point cliffs, Brisbane River boardwalk, Queen Street Mall.
-    Perth: Kings Park with Swan River panorama, Cottesloe Beach, Elizabeth Quay waterfront, Bell Tower on the foreshore.
-    Adelaide: Adelaide Central Market entrance, Glenelg Beach jetty, North Terrace cultural boulevard, Adelaide Oval exterior.
-    Gold Coast: Surfers Paradise beach skyline, Burleigh Heads rock pools, Broadwater Parklands.
-    Cairns: Esplanade Lagoon, Cairns night market, reef cruise departure terminal.
-    The choice of city should feel natural for the content pillar — e.g. Melbourne for creative/design courses, Sydney for business and finance, Brisbane for outdoors and lifestyle, Perth for a quieter student experience.
+  Australia: The exact city and landmark are provided in the user message as CITY LOCK. Follow it precisely — use that city, use that landmark, and do not substitute any other Australian city or landmark. Australia posts cover the full country: cities (Melbourne, Brisbane, Perth, Adelaide, Gold Coast, Cairns, Sydney, Hobart, Darwin), wildlife (koalas, quokkas, kangaroos), and natural wonders (Great Barrier Reef, Daintree Rainforest, Blue Mountains). The CITY LOCK exclusion rule (if any) must also be respected.
   Canada: CN Tower, Banff/Lake Louise, maple forests, Vancouver skyline, Niagara Falls.
   UK: Big Ben, Tower Bridge, Oxford University spires, red double-decker buses, Notting Hill.
   USA: Statue of Liberty, Golden Gate Bridge, NYC skyline, Harvard campus, Grand Canyon.
@@ -269,6 +296,11 @@ export async function generateContent(record, ctx) {
   const tipo     = record['Tipo de post'];
   const aspect   = tipo === 'reel' ? '9:16 vertical' : '4:5';
 
+  const isAustralia = /australia/i.test(tema ?? '');
+  const ausLoc = isAustralia
+    ? AUSTRALIA_LOCATIONS[Math.floor(Math.random() * AUSTRALIA_LOCATIONS.length)]
+    : null;
+
   const userMessage = [
     `Post type: ${tipo} (${aspect} aspect ratio)`,
     `Content pillar: ${pillar}`,
@@ -276,7 +308,14 @@ export async function generateContent(record, ctx) {
     tema ? `Destination / topic: ${tema}` : 'Destination / topic: (choose a compelling example relevant to Colombian students)',
     cta ? `CTA — use this text exactly: "${cta}"` : 'CTA: (choose the most fitting from the pillar defaults in the system prompt)',
     tipo === 'reel' ? 'Include the "scenes" array (4 scene prompts: hook, study, student_life, cta — each with "visual" and "text" fields as described in REEL SCENES).' : 'Omit the "scenes" key — not needed for this post type.',
-  ].join('\n');
+    ausLoc ? [
+      `CITY LOCK — MANDATORY (non-negotiable, overrides all other location guidance):`,
+      `  City: ${ausLoc.city}, Australia`,
+      `  Background landmark: ${ausLoc.landmark}`,
+      ausLoc.exclude ? `  IMPORTANT: ${ausLoc.exclude}` : '',
+      `Do NOT use any other Australian city or landmark. Every visual prompt (including all reel scenes) must be set in ${ausLoc.city} using the landmark above.`,
+    ].filter(Boolean).join('\n') : '',
+  ].filter(Boolean).join('\n');
 
   const message = await withRetry(() =>
     client.messages.create({
