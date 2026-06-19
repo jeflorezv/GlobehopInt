@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import path from 'path';
 
 const LOGO_PATH    = path.resolve(process.env.LOGO_PATH ?? './assets/logo.png');
+const ICON_PATH    = path.resolve(process.env.ICON_PATH ?? './assets/icon-no-bg.png');
 const FONT_PATH    = './assets/fonts/Poppins-Bold.ttf';
 const BRAND_HEX    = process.env.BRAND_PRIMARY_COLOR?.trim() || '#44539D';
 const TINT_OPACITY = Math.max(0, Math.min(1, parseFloat(process.env.BRAND_TINT_OPACITY?.trim() || '0.12') || 0.12));
@@ -28,14 +29,14 @@ export async function createOverlayPng(width, height, hookText = null) {
     composites.push(layer);
   }
 
-  const logoBuf = await sharp(LOGO_PATH).trim().resize(Math.round(width * 0.22)).png().toBuffer();
-  const { width: lw, height: lh } = await sharp(logoBuf).metadata();
-  const logoPad = 18;
-  const logoBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-    <rect x="${24 - logoPad}" y="${56 - logoPad}" width="${lw + logoPad * 2}" height="${lh + logoPad * 2}" rx="12" fill="${BRAND_DARK}" fill-opacity="0.60"/>
+  const iconBuf = await sharp(ICON_PATH).trim().resize(Math.round(width * 0.14)).png().toBuffer();
+  const { width: iw, height: ih } = await sharp(iconBuf).metadata();
+  const iconPad = 10;
+  const iconBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <rect x="${20 - iconPad}" y="${48 - iconPad}" width="${iw + iconPad * 2}" height="${ih + iconPad * 2}" rx="${Math.round((ih + iconPad * 2) / 2)}" fill="${BRAND_DARK}" fill-opacity="0.42"/>
   </svg>`;
-  composites.push({ input: Buffer.from(logoBgSvg), blend: 'over' });
-  composites.push({ input: logoBuf, blend: 'over', top: 56, left: 24 });
+  composites.push({ input: Buffer.from(iconBgSvg), blend: 'over' });
+  composites.push({ input: iconBuf, blend: 'over', top: 48, left: 20 });
 
   const filename = `overlay-${randomUUID()}.png`;
   const tmpPath  = path.join('/tmp', filename);
@@ -246,14 +247,14 @@ export async function createSimpleTextPng(width, height, text = null) {
     }
   }
 
-  const logoBuf = await sharp(LOGO_PATH).trim().resize(Math.round(width * 0.22)).png().toBuffer();
-  const { width: lw, height: lh } = await sharp(logoBuf).metadata();
-  const logoPad = 18;
-  const logoBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-    <rect x="${24 - logoPad}" y="${56 - logoPad}" width="${lw + logoPad * 2}" height="${lh + logoPad * 2}" rx="12" fill="${BRAND_DARK}" fill-opacity="0.60"/>
+  const iconBuf = await sharp(ICON_PATH).trim().resize(Math.round(width * 0.14)).png().toBuffer();
+  const { width: iw, height: ih } = await sharp(iconBuf).metadata();
+  const iconPad = 10;
+  const iconBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <rect x="${20 - iconPad}" y="${48 - iconPad}" width="${iw + iconPad * 2}" height="${ih + iconPad * 2}" rx="${Math.round((ih + iconPad * 2) / 2)}" fill="${BRAND_DARK}" fill-opacity="0.42"/>
   </svg>`;
-  composites.push({ input: Buffer.from(logoBgSvg), blend: 'over' });
-  composites.push({ input: logoBuf, blend: 'over', top: 56, left: 24 });
+  composites.push({ input: Buffer.from(iconBgSvg), blend: 'over' });
+  composites.push({ input: iconBuf, blend: 'over', top: 48, left: 20 });
 
   const filename = `scene-text-${randomUUID()}.png`;
   const tmpPath  = path.join('/tmp', filename);

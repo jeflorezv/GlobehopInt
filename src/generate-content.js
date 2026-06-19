@@ -197,16 +197,15 @@ Write 2–3 sentences: scene + mood + specific detail that makes it feel real.
 
 ---
 
-REEL CHARACTER LOCK (mandatory for every reel post — applied before writing any scene visual)
-Pick ONE character who appears across all 4 scenes. Decide these details once, then copy them verbatim into every scene visual prompt — never vary them between scenes:
-- Gender: follow GENDER CONSISTENCY rules above
-- Age: pick exactly one: 23, 26, or 29
-- Hair: one specific description — e.g. "dark brown wavy hair to her shoulders", "short black straight hair", "curly dark hair"
-- Build: "athletic build" or "slim build"
-- Expression: neutral confident expression — NOT laughing, NOT talking, NOT mid-smile transition. A quiet, natural look that stays still under video generation.
-- Clothing palette: one consistent casual outfit matching the destination climate (keep the same palette across all 4 scenes)
+REEL CHARACTER PROFILES (fixed — do not invent a new character. Pick the profile that fits the pillar and gender rules, then copy its description verbatim into every scene visual prompt)
 
-Copy the exact same age + hair + build into EVERY scene visual prompt. The viewer must recognize the same person from scene 1 through scene 4.
+AU_FEMALE_01 — Young Colombian woman, 26, dark brown wavy hair falling to her shoulders, slim build, warm olive skin, neutral confident expression, smart casual clothes in earth tones (beige, white, light tan). Use for student_story and destination_spotlight pillars.
+
+AU_FEMALE_02 — Young Colombian woman, 23, short natural curly dark brown hair, athletic build, warm caramel skin tone, calm natural expression, casual clothes in navy and white. Use for visa_tip and agency_promo pillars, and for group scenes.
+
+AU_MALE_01 — Young Colombian man, 29, short dark straight hair, lean athletic build, warm tan skin tone, composed neutral expression, smart casual clothes in dark olive and grey. Use occasionally for diversity — primarily pair with AU_FEMALE_01 in group scenes.
+
+Copy the EXACT profile description (age + hair + build + skin + expression + clothing palette) into EVERY scene visual prompt without variation. The viewer must recognize the same person from scene 1 through scene 4.
 
 ---
 
@@ -217,8 +216,8 @@ Each prompt becomes a distinct Kling AI video clip of 2.5 seconds.
 
 Scene roles:
   scene_hook:         The opening hook shot. Student walking TOWARD the iconic destination landmark — movement shots produce far more natural Kling results than standing poses and reduce facial artifact risk. Leave breathing room in the frame. The landmark must be unmistakably visible in the background. This scene receives the hook text overlay.
-  scene_study:        Academic context. Student viewed FROM BEHIND or from the side — seated at a desk or table looking out a large window, or entering a university building with a backpack. NO hands holding objects in the foreground. Hands must be resting flat on the table, tucked in a bag strap, or completely out of frame. Educational, focused, purposeful.
-  scene_student_life: Social/cultural scene. 2–3 students standing together looking at a view or landmark FROM BEHIND or from the side — NOT sitting with hands in lap. Arms around shoulders or hands in pockets. Standing shots eliminate hand-in-lap artifacts. Warm, genuine, "this could be your life" energy.
+  scene_study:        Academic context. Student walking through a university corridor or campus path with a backpack, OR standing at a library shelf browsing books, OR entering a campus building viewed from outside — ALWAYS FROM BEHIND or from the side. NO seated poses with hands in foreground. Motion-friendly: walking, entering, or standing while browsing. Hands on bag straps, in pockets, or out of frame entirely. Educational, purposeful.
+  scene_student_life: Social/cultural scene. 2–3 students walking together along a waterfront, city street, or campus path — actively moving, NOT standing still. Arms swinging naturally, hands in pockets, or one student pointing casually toward something ahead. Shot FROM BEHIND or from the side. Warm, genuine, spontaneous — "this could be your life."
   scene_cta:          Call-to-action scene. Single student facing the camera FRONT-ON — standing straight, arms relaxed at sides or hands in jacket pockets, landmark clearly visible behind. NO over-the-shoulder twist poses (they create phantom limb artifacts when animated). Warm, confident, natural smile.
 
 Each scene MUST include two fields:
