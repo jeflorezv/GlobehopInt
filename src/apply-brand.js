@@ -280,13 +280,13 @@ async function buildTextOverlay(text, imgW, imgH, isReel = false) {
   const lineBody     = hasThree ? (parts[1] ?? '').trim() : '';
   const lineCta      = hasThree ? (parts[2] ?? '').trim() : (parts[1] ?? '').trim();
 
-  const fsHeadline = Math.round(imgW * 0.082);
+  const fsHeadline = Math.round(imgW * 0.065);
   const fsBody     = Math.round(imgW * 0.050);
   const fsCta      = Math.round(imgW * 0.042);
   const gap        = Math.round(fsHeadline * 0.32);
-  const pad        = Math.round(imgW / 24) + (isReel ? 240 : 120);
+  const pad        = Math.round(imgW / 24) + (isReel ? 200 : 120);
   const textW      = Math.round(imgW * 0.88);
-  const gradY      = Math.round(imgH * (isReel ? 0.35 : 0.52));
+  const gradY      = Math.round(imgH * (isReel ? 0.58 : 0.52));
   const gradMaxOpa = isReel ? 0.92 : 0.68;
 
   const layers = [];

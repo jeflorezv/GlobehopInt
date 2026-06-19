@@ -180,6 +180,7 @@ PEOPLE & SCENE ARCHETYPES — choose the most relevant for the pillar:
 
 CLOTHING RULES — always match clothing to environment:
   - Near beach or outdoor summer scene: casual summer clothes (linen, light t-shirt, shorts or sundress) — NEVER swimwear or bikinis
+  - Wildlife sanctuary, national park, bush, or rainforest setting: casual outdoor clothes (light jeans or casual pants, clean walking shoes, breathable t-shirt or casual shirt) — NOT beachwear, NOT formal
   - Campus or city street: smart casual (jeans, clean sneakers, light jacket, blouse)
   - Airport: travel-ready casual with carry-on or suitcase
   - Café or indoor study: relaxed smart casual
