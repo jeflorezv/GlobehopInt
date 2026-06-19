@@ -2,15 +2,11 @@ import { withRetry } from './utils/retry.js';
 
 const IDEOGRAM_URL = 'https://api.ideogram.ai/generate';
 
-// Ideogram aspect ratio tokens per post type (non-reel)
+// Ideogram aspect ratio tokens per post type
 const ASPECT_RATIO = {
   single_photo: 'ASPECT_3_4',
+  reel:         'ASPECT_9_16',
 };
-
-// Reels use an explicit resolution instead of aspect_ratio to maximise source image quality.
-// RESOLUTION_1152_2048 is the highest native 9:16 portrait resolution in Ideogram V_2.
-// Note: resolution and aspect_ratio are mutually exclusive in the Ideogram API.
-const REEL_RESOLUTION = 'RESOLUTION_1152_2048';
 
 const NEGATIVE_PROMPT =
   'text, watermark, logo, overlay, smooth plastic skin, airbrushed skin, overly perfect skin, ' +
@@ -26,30 +22,26 @@ const NEGATIVE_PROMPT =
  * @returns {Promise<object>} { ...ctx, imageUrl }
  */
 export async function generateImage(record, ctx) {
-  const tipo = record['Tipo de post'];
+  const tipo        = record['Tipo de post'];
+  const aspectRatio = ASPECT_RATIO[tipo] ?? 'ASPECT_2_3';
 
   const imageUrl = await withRetry(async () => {
-    const isReel = tipo === 'reel';
-    const imageRequest = {
-      prompt:              ctx.visual,
-      negative_prompt:     NEGATIVE_PROMPT,
-      model:               'V_2',
-      style_type:          'REALISTIC',
-      magic_prompt_option: 'OFF',
-    };
-    if (isReel) {
-      imageRequest.resolution = REEL_RESOLUTION;
-    } else {
-      imageRequest.aspect_ratio = ASPECT_RATIO[tipo] ?? 'ASPECT_2_3';
-    }
-
     const resp = await fetch(IDEOGRAM_URL, {
       method: 'POST',
       headers: {
         'Api-Key':      process.env.IDEOGRAM_API_KEY,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ image_request: imageRequest }),
+      body: JSON.stringify({
+        image_request: {
+          prompt:              ctx.visual,
+          negative_prompt:     NEGATIVE_PROMPT,
+          aspect_ratio:        aspectRatio,
+          model:               'V_2',
+          style_type:          'REALISTIC',
+          magic_prompt_option: 'OFF',
+        },
+      }),
     });
 
     if (!resp.ok) {
