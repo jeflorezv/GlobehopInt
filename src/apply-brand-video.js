@@ -9,7 +9,7 @@ import { uploadVideoToCdn } from './upload-cdn.js';
 const execFileAsync = promisify(execFile);
 const TARGET_W      = 1080;
 const TARGET_H      = 1920;
-const SCENE_SECS    = 2.5;   // each Kling clip trimmed to this length
+const SCENE_SECS    = 5;     // use full Kling clip — 4 scenes × 5s = 20s total reel
 const MUSIC_DIR     = path.resolve('./assets/music');
 const MUSIC_VOLUME  = 0.15;  // 15% — music sits under any future voiceover
 
@@ -107,8 +107,9 @@ async function assembleMultiScene(videoUrls, hookText, scenes) {
       const scene = scenes?.[i];
       let overlayPath;
       if (i === 0) {
-        // Hook scene: full 3-level gradient + hook text + logo
-        overlayPath = await createOverlayPng(TARGET_W, TARGET_H, hookText);
+        // Hook scene: single punchy line from scenes[0].text — short enough to read in 5s.
+        // hookText (3-line) is reserved for single_photo; too dense for a 5-second clip.
+        overlayPath = await createOverlayPng(TARGET_W, TARGET_H, scene?.text ?? hookText ?? null);
       } else if (i === videoUrls.length - 1) {
         // CTA scene: reuse 3-level gradient — scene.text has 3 lines (question / keyword / offer)
         overlayPath = await createOverlayPng(TARGET_W, TARGET_H, scene?.text ?? null);
