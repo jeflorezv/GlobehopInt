@@ -3,6 +3,7 @@ import { withRetry } from './utils/retry.js';
 import { parseJson } from './utils/parse-json.js';
 import { pickAustraliaLocation } from './utils/australia-locations.js';
 import { selectCharacter } from './utils/characters.js';
+import { pickTopic } from './utils/variety.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL  = 'claude-sonnet-4-6';
@@ -102,14 +103,19 @@ export async function generateCarousel(record, ctx) {
   const cta      = record['CTA']          ?? 'Escríbenos por DM';
 
   const isAustralia = /australia/i.test(destino);
-  const ausLoc = isAustralia ? pickAustraliaLocation(record.id ?? '') : null;
+  const ausLoc = isAustralia ? pickAustraliaLocation(record) : null;
   const character = selectCharacter(record, pillar);
+  const topic = pickTopic(record, pillar);
 
   const userMessage = [
     `Destino: ${destino}`,
     `Pillar: ${pillar}`,
     `Audiencia: ${audience}`,
     `CTA: ${cta}`,
+    [
+      `ÁNGULO ESPECÍFICO — OBLIGATORIO: el tema concreto de este carrusel es: "${topic}".`,
+      `Elige el template y construye todos los slides alrededor de este ángulo exacto — no hagas un carrusel genérico de "estudia en Australia".`,
+    ].join('\n'),
     [
       `CHARACTER LOCK (usa esta descripción verbatim en el imagePrompt de todos los slides que incluyan personas — solo para generación de imágenes, no en textos de slides; no añadas ciudad ni región de origen):`,
       character.prompt,

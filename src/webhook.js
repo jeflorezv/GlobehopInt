@@ -129,8 +129,11 @@ async function findWeekRecords() {
     String(satDate.getDate()).padStart(2, '0'),
   ].join('-');
 
+  // DATETIME_FORMAT is required: comparing the raw date field against a
+  // 'YYYY-MM-DD' string fails on the equality day (the field renders as a full
+  // datetime), which silently excluded records dated exactly today/end-of-week.
   const params = new URLSearchParams({
-    filterByFormula:      `AND({Estado} = 'En cola', {Fecha publicación} <= '${endOfWeek}')`,
+    filterByFormula:      `AND({Estado} = 'En cola', DATETIME_FORMAT({Fecha publicación}, 'YYYY-MM-DD') <= '${endOfWeek}')`,
     'sort[0][field]':     'Fecha publicación',
     'sort[0][direction]': 'asc',
   });
@@ -209,19 +212,30 @@ app.post('/publish', requireSecret, apiLimiter, async (req, res) => {
   }
 
   try {
-    const tipo = record['Tipo de post'];
-    const { postUrl } = tipo === 'reel'
-      ? await postReel(record)
-      : await postToInstagram(record);
-
-    await markPublished(recordId, postUrl);
-    await sendPublishConfirmation({ recordId, tipo, postUrl }).catch(() => {});
-    cleanupTmpFiles(record);
+    const postUrl = await publishRecord(recordId, record);
     res.json({ ok: true, postUrl });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Publishes a fetched record to Instagram and marks it Publicado.
+// Shared by /publish, /publish-scheduled, and late approvals from the dashboard.
+async function publishRecord(recordId, record) {
+  const tipo = record['Tipo de post'];
+  const { postUrl } = tipo === 'reel'
+    ? await postReel(record)
+    : await postToInstagram(record);
+
+  await markPublished(recordId, postUrl);
+  await sendPublishConfirmation({ recordId, tipo, postUrl }).catch(() => {});
+  cleanupTmpFiles(record);
+  return postUrl;
+}
+
+function bogotaToday() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+}
 
 // ─── Retry (HMAC token from alert email) ─────────────────────────────────────
 
@@ -308,7 +322,10 @@ app.post('/review/:recordId/save-edits', requireReviewToken, apiLimiter, async (
   }
 });
 
-// POST /review/:recordId/approve — mark Aprobado for scheduled auto-publish, redirect to dashboard
+// POST /review/:recordId/approve — mark Aprobado for scheduled auto-publish.
+// If the publish date is today or already past, publish immediately in the
+// background instead of waiting for the next Mon/Wed/Fri/Sat 8am window —
+// otherwise late approvals sit "stuck" for up to two days.
 app.post('/review/:recordId/approve', requireReviewToken, apiLimiter, async (req, res) => {
   const { recordId } = req.params;
   const token = req.body?.reviewToken ?? req.query.token;
@@ -316,6 +333,19 @@ app.post('/review/:recordId/approve', requireReviewToken, apiLimiter, async (req
 
   try {
     await markApproved(recordId);
+
+    const record = await fetchRecord(recordId);
+    const fecha  = record['Fecha publicación'] ?? '';
+    if (fecha && fecha <= bogotaToday()) {
+      console.log(`[review] ${recordId} approved late (due ${fecha}) — publishing now`);
+      res.redirect(`${back}&publishing=1`);
+      publishRecord(recordId, record).catch(async err => {
+        console.error(`[review] late publish ${recordId} failed: ${err.message}`);
+        await sendErrorAlert({ recordId, stepName: 'approve-publish', error: err }).catch(() => {});
+      });
+      return;
+    }
+
     res.redirect(`${back}&approved=1`);
   } catch (err) {
     console.error('[review] approve failed:', err.message);
@@ -347,9 +377,10 @@ app.post('/publish-scheduled', requireSecret, apiLimiter, async (req, res) => {
   const TABLE   = process.env.AIRTABLE_TABLE_NAME ?? 'Contenido Instagram';
   const AT_REST = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE)}`;
 
-  // Find all Aprobado records whose publish date is today or earlier (catches any missed days)
+  // Find all Aprobado records whose publish date is today or earlier (catches any missed days).
+  // DATETIME_FORMAT is required — see findWeekRecords for the equality-day pitfall.
   const params = new URLSearchParams({
-    filterByFormula:      `AND({Estado} = 'Aprobado', {Fecha publicación} <= '${today}')`,
+    filterByFormula:      `AND({Estado} = 'Aprobado', DATETIME_FORMAT({Fecha publicación}, 'YYYY-MM-DD') <= '${today}')`,
     'sort[0][field]':     'Fecha publicación',
     'sort[0][direction]': 'asc',
   });
@@ -453,6 +484,8 @@ function dashboardHtml(pendingRecords, approvedRecords, token, query = {}) {
     flash = '<div class="flash flash-ok">✓ Post aprobado y programado para publicar automáticamente.</div>';
   } else if (query.published) {
     flash = '<div class="flash flash-ok">✓ Post publicado en Instagram exitosamente.</div>';
+  } else if (query.publishing) {
+    flash = '<div class="flash flash-ok">✓ Post aprobado — la fecha ya pasó, se está publicando en Instagram ahora mismo (revisa en unos minutos).</div>';
   } else if (query.rejected) {
     flash = '<div class="flash flash-warn">Post rechazado y movido a Omitir.</div>';
   } else if (query.error) {

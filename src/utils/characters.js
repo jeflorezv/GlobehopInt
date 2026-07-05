@@ -7,6 +7,8 @@
 // Gender is alternated deterministically per Airtable record ID so consecutive
 // posts naturally rotate between female and male characters.
 
+import { hashStr } from './variety.js';
+
 const FEMALE_PROFILES = [
   // CO_FEMALE_MEDELLIN_01
   '26-year-old Colombian woman, light-medium olive skin, dark brown shoulder-length hair, brown eyes, natural warm smile, casual modern student clothing, realistic Colombian appearance, documentary photography, natural skin texture, candid student lifestyle',
@@ -57,13 +59,15 @@ const PILLAR_POOLS = {
  */
 export function selectCharacter(record, pillar) {
   const id = record.id ?? '';
-  const charSum = id.split('').reduce((sum, c) => sum + c.charCodeAt(0), 0);
-  const isFemale = charSum % 2 === 0;
+  // Salted FNV hash — independent from the location and scene hashes so two
+  // records can no longer collide into the same city AND the same face at once.
+  const hash = hashStr(`char:${id}`);
+  const isFemale = hash % 2 === 0;
 
   const pool = PILLAR_POOLS[pillar] ?? PILLAR_POOLS.destination_spotlight;
   const indices = isFemale ? pool.female : pool.male;
   const profiles = isFemale ? FEMALE_PROFILES : MALE_PROFILES;
-  const idx = indices[charSum % indices.length];
+  const idx = indices[(hash >>> 1) % indices.length];
 
   return {
     gender: isFemale ? 'female' : 'male',

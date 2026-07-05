@@ -3,6 +3,7 @@ import { withRetry } from './utils/retry.js';
 import { parseJson } from './utils/parse-json.js';
 import { pickAustraliaLocation } from './utils/australia-locations.js';
 import { selectCharacter } from './utils/characters.js';
+import { pickTopic, pickSceneArchetype } from './utils/variety.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -266,14 +267,25 @@ export async function generateContent(record, ctx) {
   const aspect   = tipo === 'reel' ? '9:16 vertical' : '4:5';
 
   const isAustralia = /australia/i.test(tema ?? '');
-  const ausLoc = isAustralia ? pickAustraliaLocation(record.id ?? '') : null;
+  const ausLoc = isAustralia ? pickAustraliaLocation(record) : null;
   const character = selectCharacter(record, pillar);
+  const topic = pickTopic(record, pillar);
+  const archetype = tipo === 'single_photo' ? pickSceneArchetype(record) : null;
 
   const userMessage = [
     `Post type: ${tipo} (${aspect} aspect ratio)`,
     `Content pillar: ${pillar}`,
     `Target audience: ${audience}`,
     tema ? `Destination / topic: ${tema}` : 'Destination / topic: (choose a compelling example relevant to Colombian students)',
+    [
+      `TOPIC LOCK — MANDATORY: this post's specific angle is: "${topic}".`,
+      `Build the caption, hook, and visual around this exact angle — do not fall back to a generic "study in Australia" post.`,
+      `Do not copy the model example hooks from the system prompt; write fresh lines that fit this angle.`,
+    ].join('\n'),
+    archetype ? [
+      `SCENE ARCHETYPE LOCK — base the main "visual" on this scene (adapted to the CITY LOCK location and TOPIC angle):`,
+      archetype,
+    ].join('\n') : '',
     cta ? `CTA — use this text exactly: "${cta}"` : 'CTA: (choose the most fitting from the pillar defaults in the system prompt)',
     tipo === 'reel' ? 'Include the "scenes" array (4 scene prompts: hook, study, student_life, cta — each with "visual" and "text" fields as described in REEL SCENES).' : 'Omit the "scenes" key — not needed for this post type.',
     [

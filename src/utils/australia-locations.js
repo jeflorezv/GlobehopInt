@@ -1,11 +1,16 @@
 // Australia location library for CITY LOCK injection.
-// Location is picked deterministically from the Airtable record ID so:
+// Location is picked deterministically from the record's publish week + day
+// slot, so:
 //   - the same record always maps to the same city/landmark (idempotent retries)
-//   - different records spread naturally across the full 22-location list
+//   - the 4 posts of any one week always land in 4 different cities (slots are
+//     5 indexes apart — wider than the largest same-city group in the list)
+//   - the week hash rotates the whole set week over week
 // No in-memory state — deploy restarts have zero effect on variety.
 //
 // Locations with type:'wildlife' trigger a WILDLIFE SCENE DIRECTIVE in
 // generate-content.js that makes the animal the primary visual subject.
+
+import { hashStr } from './variety.js';
 
 export const AUSTRALIA_LOCATIONS = [
   // Melbourne — 4 entries
@@ -40,15 +45,35 @@ export const AUSTRALIA_LOCATIONS = [
   { city: 'Kangaroo Island', landmark: 'Wild kangaroos grazing on coastal heathland at dawn, Flinders Chase National Park cliffs and Southern Ocean in the background', exclude: '', type: 'wildlife' },
 ];
 
+// Gap between same-week slots. Must exceed the widest same-city run in
+// AUSTRALIA_LOCATIONS (Melbourne, 4 entries) so weekly picks never share a city.
+const SLOT_STRIDE = 5;
+
+// Posting days → slot index. Other weekdays fall back to getDay() % 4.
+const DAY_SLOTS = { 1: 0, 3: 1, 5: 2, 6: 3 }; // Mon, Wed, Fri, Sat
+
 /**
- * Returns the location for a given Airtable record ID, deterministically.
- * Same record ID always returns the same location. Different IDs spread across
- * all 22 locations via a character-sum hash.
+ * Returns the location for a record, deterministically.
+ * Uses the publish date's week + day slot when available (guarantees 4 distinct
+ * cities per week); falls back to a record-ID hash for records with no date.
  *
- * @param {string} recordId  Airtable record ID (e.g. "recXXXXXXXXXXXXXX")
+ * @param {object|string} record  Airtable record fields (with .id and
+ *                                'Fecha publicación'), or a bare record ID
  * @returns {{ city, landmark, exclude, type? }}
  */
-export function pickAustraliaLocation(recordId = '') {
-  const hash = recordId.split('').reduce((sum, c) => sum + c.charCodeAt(0), 0);
-  return AUSTRALIA_LOCATIONS[hash % AUSTRALIA_LOCATIONS.length];
+export function pickAustraliaLocation(record = {}) {
+  const n = AUSTRALIA_LOCATIONS.length;
+
+  const fecha = typeof record === 'object' ? record['Fecha publicación'] : null;
+  if (fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    const [y, m, d]  = fecha.split('-').map(Number);
+    const date       = new Date(y, m - 1, d);
+    const monday     = new Date(y, m - 1, d - ((date.getDay() + 6) % 7));
+    const weekKey    = `${monday.getFullYear()}-${monday.getMonth() + 1}-${monday.getDate()}`;
+    const slot       = DAY_SLOTS[date.getDay()] ?? date.getDay() % 4;
+    return AUSTRALIA_LOCATIONS[(hashStr(`loc:${weekKey}`) + slot * SLOT_STRIDE) % n];
+  }
+
+  const id = typeof record === 'string' ? record : record.id ?? '';
+  return AUSTRALIA_LOCATIONS[hashStr(`loc:${id}`) % n];
 }
