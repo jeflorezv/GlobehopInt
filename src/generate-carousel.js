@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { withRetry } from './utils/retry.js';
 import { parseJson } from './utils/parse-json.js';
 import { pickAustraliaLocation } from './utils/australia-locations.js';
+import { selectCharacter } from './utils/characters.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL  = 'claude-sonnet-4-6';
@@ -23,7 +24,7 @@ T02 Student Success Story   → S2:reto S3:decisión S4:viaje S5:resultado      
 T03 Parent Content          → S2:miedo S3:realidad S4:seguridad S5:éxito                      [padres]
 T04 Visa Mistakes           → S2:error#1 S3:error#2 S4:error#3 S5:solución                    [visa_tip]
 T05 Visa Requirements       → S2:requisito1 S3:requisito2 S4:requisito3 S5:pro tip            [visa_tip]
-T06 Cost Breakdown          → S2:matrícula S3:alojamiento S4:vida diaria S5:realidad          [visa_tip/destination]
+T06 Budget Planning         → S2:factores que afectan el costo S3:alojamiento (tipos, sin cifras) S4:cómo planificar S5:agenda con GlobeHop [agency_promo/destination_spotlight]
 T07 Myth vs Reality         → S2:mito S3:realidad S4:mito S5:realidad                        [any]
 T08 Work While Studying     → S2:derechos S3:trabajos típicos S4:beneficios S5:ejemplo real  [destination_spotlight]
 T09 Compare Destinations    → S2:destino A S3:destino B S4:destino C S5:mejor fit            [destination_spotlight]
@@ -59,7 +60,8 @@ SLIDES FIJOS:
 REGLAS DE CONTENIDO
 - Textos en español. Sin él/ella — usa "tú" o formas neutras.
 - Headlines sin puntuación extraña al final — se ven mejor en negrita sin punto ni coma
-- COSTOS Y FONDOS: si mencionas cifras de dinero, siempre expresa en pesos colombianos (COP) y añade "aprox." antes del valor. Ejemplo: "aprox. $15.000.000 COP". Nunca menciones valores exactos — aclara que el monto real se define en la asesoría gratuita con GlobeHop.
+- COSTOS, TARIFAS Y MONTOS — REGLA ABSOLUTA: nunca incluyas cifras de dinero, montos aproximados ni símbolos de moneda ($, AUD, A$, USD, COP, MXN, CLP) en ningún slide, caption ni hook. Sin excepciones y sin framing de "aprox." — los montos aproximados también están prohibidos. Si el contenido toca costos o presupuesto, usa solo categorías generales (matrícula, alojamiento, transporte) sin cifras, y dirige siempre al estudiante a agendar una asesoría gratuita con GlobeHop para información actualizada y personalizada.
+- VISA, REQUISITOS Y DERECHOS LABORALES — REDIRECT OBLIGATORIO: cualquier slide que mencione requisitos de visa, condiciones de elegibilidad, plazos de tramitación o derechos laborales debe incluir obligatoriamente una frase final que redirija al estudiante a consultar con GlobeHop para información actualizada y precisa. Esto es obligatorio, no opcional. Los requisitos cambian con frecuencia; nunca los presentes como un hecho inamovible. Ejemplo de cierre: "Los requisitos cambian — agenda con GlobeHop para saber exactamente qué aplica en tu caso."
 - HOOKS (slide 1): abre con paradoja, contraste o lo que nadie dice. No empieces con el nombre del destino. Buenos ejemplos: "Lo que aprendes en Dubái va más allá del inglés", "El destino más subestimado para aprender inglés", "Muchos piensan en estudiar inglés. Pocos consideran esto".
 - LISTAS: usa ✖ al inicio de cada ítem cuando el slide muestra errores o mitos; usa ✓ cuando muestra soluciones o checklists. El símbolo va siempre dentro del texto del ítem. Ejemplo de error: "✖ Fondos depositados a último momento". Ejemplo de solución: "✓ Carta de intención clara".
 - SLIDE 5: siempre es la "solución" — da valor real antes del CTA. Usa layout "list" con ítems ✓. Los pasos deben ser aplicables a cualquier estudiante (no solo menores): documentación, presupuesto, timing, asesoría. Evita ítems específicos de menores de edad.
@@ -68,11 +70,11 @@ REGLAS DE CONTENIDO
 - CTA (slide 6): headline interrogativo ("¿Quieres aplicar a [DESTINO] sin errores?"). savePrompt con dos frases: guardar + compartir ("Guarda este carrusel · Compártelo con alguien que quiera estudiar").
 
 IMAGE PROMPTS (imagePrompt por slide, en inglés para Ideogram)
-Cada slide tendrá una fotografía de fondo con overlay oscuro — elige escenas con profundidad de campo, cielos abiertos o composiciones claras donde el texto superpuesto sea legible.
-- Slide 1: vista panorámica o icónica del destino, hora dorada o luz dramática
-- Slides 2-5: siempre incluye personas — estudiante en campus o aula, familia en reunión de asesoría, joven en aeropuerto o calle de la ciudad, profesional en clase. Combina el entorno del destino con presencia humana real.
-- Slide 6: escena aspiracional — estudiante celebrando con bandera del país, skyline al atardecer, o campus con jóvenes felices
-Estilo fotográfico: documentary style, photojournalistic lighting, natural skin texture, visible pores. Evita: perfect skin, beauty photography, ultra attractive faces, AI-looking people. Sin texto ni logos. 2-3 oraciones en inglés.
+Cada slide tendrá una fotografía de fondo — elige escenas con cielos despejados, luz de sol brillante o amanecer cálido. Nunca cielos oscuros, tormentosos, nocturnos ni nublados.
+- Slide 1: vista panorámica o icónica del destino, cielo azul despejado o luz de amanecer
+- Slides 2-5: siempre incluye personas — usa el CHARACTER LOCK del mensaje del usuario como personaje principal en cada slide con personas. Combina el entorno del destino con presencia humana real.
+- Slide 6: escena aspiracional — el CHARACTER LOCK celebrando, skyline al atardecer cálido, o campus con jóvenes felices bajo cielo azul
+Estilo fotográfico: documentary style, photojournalistic lighting, natural skin texture, visible pores, bright sunny day, clear blue sky. Evita: perfect skin, beauty photography, ultra attractive faces, AI-looking people, dark sky, stormy sky, night scene. Sin texto ni logos. 2-3 oraciones en inglés.
 
 DESTINO AUSTRALIA — CIUDAD Y LANDMARK:
 La ciudad y el landmark exactos se especifican en el mensaje del usuario como CITY LOCK. Síguelos al pie de la letra en todos los imagePrompts del carrusel. Australia cubre todo el país: ciudades (Melbourne, Brisbane, Perth, Adelaide, Gold Coast, Cairns, Sydney, Hobart, Darwin), fauna (koalas, quokkas, canguros) y maravillas naturales (Gran Barrera de Coral, Daintree, Montañas Azules). Respeta también la regla de exclusión del CITY LOCK si se indica.
@@ -100,19 +102,30 @@ export async function generateCarousel(record, ctx) {
   const cta      = record['CTA']          ?? 'Escríbenos por DM';
 
   const isAustralia = /australia/i.test(destino);
-  const ausLoc = isAustralia ? pickAustraliaLocation() : null;
+  const ausLoc = isAustralia ? pickAustraliaLocation(record.id ?? '') : null;
+  const character = selectCharacter(record, pillar);
 
   const userMessage = [
     `Destino: ${destino}`,
     `Pillar: ${pillar}`,
     `Audiencia: ${audience}`,
     `CTA: ${cta}`,
+    [
+      `CHARACTER LOCK (usa esta descripción verbatim en el imagePrompt de todos los slides que incluyan personas — solo para generación de imágenes, no en textos de slides; no añadas ciudad ni región de origen):`,
+      character.prompt,
+    ].join('\n'),
     ausLoc ? [
       `CITY LOCK — OBLIGATORIO (no negociable, anula todas las demás instrucciones de ubicación):`,
       `  Ciudad: ${ausLoc.city}, Australia`,
       `  Landmark de fondo: ${ausLoc.landmark}`,
       ausLoc.exclude ? `  IMPORTANTE: ${ausLoc.exclude}` : '',
       `Todos los imagePrompts del carrusel deben estar ambientados en ${ausLoc.city} usando el landmark indicado. No uses ninguna otra ciudad australiana.`,
+      ausLoc.type === 'wildlife' ? [
+        `DIRECTIVA DE FAUNA (obligatoria — esta ubicación presenta fauna australiana):`,
+        `El animal descrito en el landmark es el sujeto visual principal de cada slide que incluya personas. Ubícalo en primer plano o a nivel de ojos.`,
+        `El personaje del CHARACTER LOCK aparece en segundo plano, observando o parado cerca del animal — involucrado pero claramente secundario respecto a la fauna.`,
+        `El animal debe ser nítido, detallado y ser el héroe indiscutible del encuadre. El estudiante aporta escala humana y conexión emocional, no protagonismo.`,
+      ].join('\n') : '',
     ].filter(Boolean).join('\n') : '',
   ].filter(Boolean).join('\n');
 

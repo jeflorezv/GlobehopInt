@@ -1,7 +1,7 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import rateLimit from 'express-rate-limit';
 import { runPipeline }             from './pipeline.js';
 import { postToInstagram }         from './post-to-instagram.js';
@@ -9,12 +9,14 @@ import { postReel }                from './post-reel.js';
 import {
   fetchRecord,
   fetchPendingRecords,
+  fetchApprovedRecords,
   markEnCola,
+  markApproved,
   markPublished,
   markOmitir,
   saveEdits,
 } from './save-to-airtable.js';
-import { sendPublishConfirmation } from './send-alert.js';
+import { sendPublishConfirmation, sendErrorAlert } from './send-alert.js';
 
 const REQUIRED_ENV = [
   'ANTHROPIC_API_KEY', 'IDEOGRAM_API_KEY',
@@ -48,10 +50,15 @@ const inFlight = new Set();
 
 // ─── Auth middlewares ──────────────────────────────────────────────────────────
 
-// Requires the master secret in the x-webhook-secret header only (never query string)
+// Requires the master secret in the x-webhook-secret header only (never query string).
+// Uses HMAC-normalised constant-time comparison to prevent timing oracle attacks.
 function requireSecret(req, res, next) {
-  const provided = req.headers['x-webhook-secret'];
-  if (!provided || provided !== process.env.WEBHOOK_SECRET) {
+  const provided = req.headers['x-webhook-secret'] ?? '';
+  const expected = process.env.WEBHOOK_SECRET;
+  const key = Buffer.from('gh-webhook');
+  const bufA = createHmac('sha256', key).update(provided).digest();
+  const bufB = createHmac('sha256', key).update(expected).digest();
+  if (!timingSafeEqual(bufA, bufB)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
@@ -104,18 +111,28 @@ app.get('/health', (_req, res) => {
 
 // ─── Generation ───────────────────────────────────────────────────────────────
 
-async function findNextRecord() {
+async function findWeekRecords() {
   const today   = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
   const BASE_ID = process.env.AIRTABLE_BASE_ID;
   const API_KEY = process.env.AIRTABLE_API_KEY;
   const TABLE   = process.env.AIRTABLE_TABLE_NAME ?? 'Contenido Instagram';
   const AT_REST = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE)}`;
 
+  // End of current week (Saturday) in Bogotá.
+  const [y, m, d] = today.split('-').map(Number);
+  const todayDate   = new Date(y, m - 1, d);
+  const daysUntilSat = (6 - todayDate.getDay() + 7) % 7;
+  const satDate     = new Date(y, m - 1, d + daysUntilSat);
+  const endOfWeek   = [
+    satDate.getFullYear(),
+    String(satDate.getMonth() + 1).padStart(2, '0'),
+    String(satDate.getDate()).padStart(2, '0'),
+  ].join('-');
+
   const params = new URLSearchParams({
-    filterByFormula:      `AND({Estado} = 'En cola', {Fecha publicación} <= '${today}')`,
+    filterByFormula:      `AND({Estado} = 'En cola', {Fecha publicación} <= '${endOfWeek}')`,
     'sort[0][field]':     'Fecha publicación',
     'sort[0][direction]': 'asc',
-    maxRecords:           '1',
   });
 
   const resp = await fetch(`${AT_REST}?${params}`, {
@@ -123,33 +140,34 @@ async function findNextRecord() {
   });
   if (!resp.ok) throw new Error(`Airtable query failed: ${await resp.text()}`);
   const json = await resp.json();
-  return json.records?.[0]?.id ?? null;
+  return (json.records ?? []).map(r => r.id);
 }
 
 app.post('/generate-next', requireSecret, apiLimiter, async (req, res) => {
-  let recordId;
+  let recordIds;
   try {
-    recordId = await findNextRecord();
+    recordIds = await findWeekRecords();
   } catch (err) {
     return res.status(500).json({ error: `Airtable query failed: ${err.message}` });
   }
 
-  if (!recordId) {
-    console.log('[pipeline] /generate-next — no En cola records for today');
-    return res.json({ skipped: true, reason: 'No records En cola for today' });
+  // Filter out records already being processed
+  const pending = recordIds.filter(id => !inFlight.has(id));
+
+  if (!pending.length) {
+    console.log('[pipeline] /generate-next — no En cola records for this week');
+    return res.json({ skipped: true, reason: 'No records En cola for this week' });
   }
 
-  if (inFlight.has(recordId)) {
-    return res.status(409).json({ error: 'Pipeline already running for this record' });
+  console.log(`[pipeline] /generate-next — starting ${pending.length} record(s): ${pending.join(', ')}`);
+  res.json({ accepted: true, count: pending.length, recordIds: pending });
+
+  for (const recordId of pending) {
+    inFlight.add(recordId);
+    runPipeline(recordId)
+      .catch(err => console.error(`[pipeline] ${recordId} background error:`, err.message))
+      .finally(() => inFlight.delete(recordId));
   }
-
-  console.log(`[pipeline] /generate-next — found ${recordId}`);
-  res.json({ accepted: true, recordId });
-
-  inFlight.add(recordId);
-  runPipeline(recordId)
-    .catch(err => console.error(`[pipeline] ${recordId} background error:`, err.message))
-    .finally(() => inFlight.delete(recordId));
 });
 
 app.post('/generate', requireSecret, apiLimiter, (req, res) => {
@@ -247,9 +265,12 @@ app.get('/retry/:recordId', requireRetryToken, apiLimiter, async (req, res) => {
 app.get('/review', requireReviewToken, async (req, res) => {
   const token = req.query.token;
   try {
-    const records = await fetchPendingRecords();
+    const [pendingRecords, approvedRecords] = await Promise.all([
+      fetchPendingRecords(),
+      fetchApprovedRecords(),
+    ]);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(dashboardHtml(records, token, req.query));
+    res.send(dashboardHtml(pendingRecords, approvedRecords, token, req.query));
   } catch (err) {
     res.status(500).setHeader('Content-Type', 'text/html; charset=utf-8')
       .send(errorPage(`Error cargando registros: ${err.message}`));
@@ -287,22 +308,15 @@ app.post('/review/:recordId/save-edits', requireReviewToken, apiLimiter, async (
   }
 });
 
-// POST /review/:recordId/approve — publish immediately, then redirect to dashboard
+// POST /review/:recordId/approve — mark Aprobado for scheduled auto-publish, redirect to dashboard
 app.post('/review/:recordId/approve', requireReviewToken, apiLimiter, async (req, res) => {
   const { recordId } = req.params;
   const token = req.body?.reviewToken ?? req.query.token;
   const back  = `/review?token=${encodeURIComponent(token)}`;
 
   try {
-    const record = await fetchRecord(recordId);
-    const tipo   = record['Tipo de post'];
-    const { postUrl } = tipo === 'reel'
-      ? await postReel(record)
-      : await postToInstagram(record);
-    await markPublished(recordId, postUrl);
-    await sendPublishConfirmation({ recordId, tipo, postUrl }).catch(() => {});
-    cleanupTmpFiles(record);
-    res.redirect(`${back}&published=1`);
+    await markApproved(recordId);
+    res.redirect(`${back}&approved=1`);
   } catch (err) {
     console.error('[review] approve failed:', err.message);
     res.redirect(`${back}&error=${encodeURIComponent(err.message)}`);
@@ -324,9 +338,66 @@ app.post('/review/:recordId/reject', requireReviewToken, apiLimiter, async (req,
   }
 });
 
+// ─── Scheduled auto-publish (Make.com fires Mon/Wed/Fri/Sat at 08:00 Bogotá) ──
+
+app.post('/publish-scheduled', requireSecret, apiLimiter, async (req, res) => {
+  const today   = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  const BASE_ID = process.env.AIRTABLE_BASE_ID;
+  const API_KEY = process.env.AIRTABLE_API_KEY;
+  const TABLE   = process.env.AIRTABLE_TABLE_NAME ?? 'Contenido Instagram';
+  const AT_REST = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE)}`;
+
+  // Find all Aprobado records whose publish date is today or earlier (catches any missed days)
+  const params = new URLSearchParams({
+    filterByFormula:      `AND({Estado} = 'Aprobado', {Fecha publicación} <= '${today}')`,
+    'sort[0][field]':     'Fecha publicación',
+    'sort[0][direction]': 'asc',
+  });
+
+  let records;
+  try {
+    const resp = await fetch(`${AT_REST}?${params}`, {
+      headers: { Authorization: `Bearer ${API_KEY}` },
+    });
+    if (!resp.ok) throw new Error(`Airtable query failed: ${await resp.text()}`);
+    const json = await resp.json();
+    records = json.records ?? [];
+  } catch (err) {
+    return res.status(500).json({ error: `Failed to fetch approved records: ${err.message}` });
+  }
+
+  if (!records.length) {
+    console.log('[publish-scheduled] no Aprobado records due today');
+    return res.json({ skipped: true, reason: 'No Aprobado records due today' });
+  }
+
+  // Respond immediately — publishing (especially reels) can take minutes
+  res.json({ accepted: true, count: records.length, recordIds: records.map(r => r.id) });
+
+  for (const r of records) {
+    const recordId = r.id;
+    const record   = r.fields;
+    const tipo     = record['Tipo de post'];
+    try {
+      console.log(`[publish-scheduled] publishing ${recordId} (${tipo})`);
+      const full = await fetchRecord(recordId);
+      const { postUrl } = tipo === 'reel'
+        ? await postReel(full)
+        : await postToInstagram(full);
+      await markPublished(recordId, postUrl);
+      await sendPublishConfirmation({ recordId, tipo, postUrl }).catch(() => {});
+      cleanupTmpFiles(full);
+      console.log(`[publish-scheduled] ${recordId} published: ${postUrl}`);
+    } catch (err) {
+      console.error(`[publish-scheduled] ${recordId} failed: ${err.message}`);
+      await sendErrorAlert({ recordId, stepName: 'publish-scheduled', error: err }).catch(() => {});
+    }
+  }
+});
+
 // ─── Static image serving (Railway /tmp files, branded single_photo) ──────────
 
-app.get('/images/:filename', (req, res) => {
+app.get('/images/:filename', apiLimiter, (req, res) => {
   const { filename } = req.params;
 
   if (!filename.match(/^branded-[\w-]+\.jpg$/)) {
@@ -372,12 +443,15 @@ function esc(str) {
 
 // ─── HTML: dashboard ──────────────────────────────────────────────────────────
 
-function dashboardHtml(records, token, query = {}) {
-  const count = records.length;
-  const t     = encodeURIComponent(token);
+function dashboardHtml(pendingRecords, approvedRecords, token, query = {}) {
+  const pendingCount  = pendingRecords.length;
+  const approvedCount = approvedRecords.length;
+  const t = encodeURIComponent(token);
 
   let flash = '';
-  if (query.published) {
+  if (query.approved) {
+    flash = '<div class="flash flash-ok">✓ Post aprobado y programado para publicar automáticamente.</div>';
+  } else if (query.published) {
     flash = '<div class="flash flash-ok">✓ Post publicado en Instagram exitosamente.</div>';
   } else if (query.rejected) {
     flash = '<div class="flash flash-warn">Post rechazado y movido a Omitir.</div>';
@@ -385,9 +459,15 @@ function dashboardHtml(records, token, query = {}) {
     flash = `<div class="flash flash-err">Error: ${esc(query.error)}</div>`;
   }
 
-  const body = count === 0
+  const pendingSection = pendingCount === 0
     ? '<div class="empty"><h2>Todo al día 🎉</h2><p>No hay posts pendientes de revisión.</p></div>'
-    : `<div class="grid">${records.map(r => cardHtml(r, t)).join('')}</div>`;
+    : `<div class="section-header">Pendiente de revisión (${pendingCount})</div><div class="grid">${pendingRecords.map(r => cardHtml(r, t)).join('')}</div>`;
+
+  const approvedSection = approvedCount > 0
+    ? `<div class="section-header section-header-approved">Programados para publicar (${approvedCount})</div><div class="grid">${approvedRecords.map(r => approvedCardHtml(r)).join('')}</div>`
+    : '';
+
+  const body = pendingSection + approvedSection;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -418,12 +498,16 @@ ${BASE_CSS}
 .card-fecha{font-size:12px;color:#71717a}
 .card-cta{display:block;background:#44539D;color:#fff;text-align:center;padding:11px;border-radius:9px;font-size:14px;font-weight:600;margin-top:auto;transition:background .15s}
 .card-cta:hover{background:#3a4589}
+.section-header{padding:10px 20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#52525b;border-bottom:1px solid #21262d;border-top:1px solid #21262d;margin-top:4px}
+.section-header-approved{color:#67BB97}
+.card-approved{opacity:.85}
+.card-scheduled-badge{position:absolute;top:10px;right:10px;background:rgba(103,187,151,.9);color:#0a1a12;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px}
 </style>
 </head>
 <body>
 <div class="header">
   <span class="header-title">🌍 GlobeHop · Revisión de contenido</span>
-  <span class="badge-count">${count} pendiente${count !== 1 ? 's' : ''}</span>
+  <span class="badge-count">${pendingCount} pendiente${pendingCount !== 1 ? 's' : ''}</span>
 </div>
 ${flash}
 ${body}
@@ -452,6 +536,30 @@ function cardHtml(record, encodedToken) {
     <div class="card-dest">${esc(dest)}</div>
     <div class="card-fecha">${esc(fecha)}</div>
     <a href="/review/${esc(id)}?token=${encodedToken}" class="card-cta">Revisar contenido →</a>
+  </div>
+</div>`;
+}
+
+function approvedCardHtml(record) {
+  const f    = record.fields;
+  const tipo = f['Tipo de post'] ?? '?';
+  const dest = f['Destino/Tema'] ?? 'Sin destino';
+  const fecha = f['Fecha publicación'] ?? '';
+  const img  = f['URL imagen branded'] ?? f['URL imagen'] ?? '';
+
+  const thumb = img
+    ? `<img src="${esc(img)}" alt="${esc(dest)}" loading="lazy">`
+    : '<div class="no-img">Sin imagen</div>';
+
+  return `<div class="card card-approved">
+  <div class="card-thumb">
+    ${thumb}
+    <span class="card-tipo">${esc(tipo)}</span>
+    <span class="card-scheduled-badge">✓ Programado</span>
+  </div>
+  <div class="card-body">
+    <div class="card-dest">${esc(dest)}</div>
+    <div class="card-fecha">Publica el ${esc(fecha)} · 8:00 a.m.</div>
   </div>
 </div>`;
 }
@@ -530,7 +638,7 @@ function recordDetailHtml(recordId, record, token, req = {}) {
     ? `<div class="actions">
   <form method="POST" action="/review/${esc(recordId)}/approve">
     <input type="hidden" name="reviewToken" value="${esc(token)}">
-    <button type="submit" class="btn btn-approve">✓ Aprobar y Publicar</button>
+    <button type="submit" class="btn btn-approve">✓ Aprobar</button>
   </form>
   <form method="POST" action="/review/${esc(recordId)}/reject">
     <input type="hidden" name="reviewToken" value="${esc(token)}">

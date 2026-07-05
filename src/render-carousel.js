@@ -4,16 +4,18 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { uploadToCdn } from './upload-cdn.js';
 import { withRetry } from './utils/retry.js';
+import { assertAllowedUrl } from './utils/fetch-guard.js';
 
 const __dirname    = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS       = path.resolve(__dirname, '../assets');
 const FONTS_DIR    = path.join(ASSETS, 'fonts');
-const IDEOGRAM_URL = 'https://api.ideogram.ai/generate';
+const IDEOGRAM_URL = 'https://api.ideogram.ai/v1/ideogram-v3/generate';
 
 const NEGATIVE_PROMPT =
   'text, watermark, logo, overlay, smooth plastic skin, airbrushed skin, overly perfect skin, ' +
   'stock photo aesthetic, generic corporate photography, artificial studio lighting, CGI look, ' +
-  'oversaturated HDR, illustration, painting, cartoon, 3D render, blurry background, heavy bokeh';
+  'oversaturated HDR, illustration, painting, cartoon, 3D render, blurry background, heavy bokeh, ' +
+  'dark sky, night sky, stormy sky, dark dramatic clouds, overcast grey sky, rainy, foggy, gloomy weather';
 
 // Loaded once at startup and cached for all render calls.
 const [NEXA_HEAVY, NEXA_LIGHT, POPPINS_BOLD, LOGO_B64, ICON_B64] = await Promise.all([
@@ -84,14 +86,11 @@ async function generateBackground(prompt) {
       method:  'POST',
       headers: { 'Api-Key': process.env.IDEOGRAM_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        image_request: {
-          prompt,
-          negative_prompt:     NEGATIVE_PROMPT,
-          aspect_ratio:        'ASPECT_3_4',
-          model:               'V_2',
-          style_type:          'REALISTIC',
-          magic_prompt_option: 'OFF',
-        },
+        prompt,
+        negative_prompt:     NEGATIVE_PROMPT,
+        aspect_ratio:        '3x4',
+        style_type:          'REALISTIC',
+        magic_prompt_option: 'OFF',
       }),
     });
 
@@ -106,6 +105,7 @@ async function generateBackground(prompt) {
     const imgUrl = json?.data?.[0]?.url;
     if (!imgUrl) throw new Error(`[render-carousel] Ideogram: no URL in response`);
 
+    assertAllowedUrl(imgUrl, 'render-carousel');
     const imgResp = await fetch(imgUrl);
     const buf     = Buffer.from(await imgResp.arrayBuffer());
     return buf.toString('base64');
@@ -182,7 +182,7 @@ function bgStyle(b64, overlayColor = 'rgba(18,26,36,0.72)') {
   `;
 }
 
-function overlay(color = 'rgba(18,26,36,0.48)') {
+function overlay(color = 'rgba(18,26,36,0.32)') {
   return `
     <div style="
       position:absolute; inset:0;
@@ -279,7 +279,7 @@ function statementHtml(s, total, bgB64) {
   .accent { width:72px; height:5px; background:${C.MINT}; border-radius:3px; margin-top:44px; }
   .bar    { height:8px; background:${C.MINT}; flex-shrink:0; position:relative; z-index:1; }
 </style></head><body>
-  ${overlay('rgba(18,26,36,0.46)')}
+  ${overlay('rgba(18,26,36,0.30)')}
   <div class="layer">
     <div class="top">${logoPill()} ${chip(s.slideNumber, total)}</div>
     <div class="content">
@@ -346,7 +346,7 @@ function listHtml(s, total, bgB64) {
   .rule  { width:90px; height:5px; background:${C.MINT}; border-radius:3px; margin:20px 0 40px; }
   .bar   { height:8px; background:${C.MINT}; flex-shrink:0; position:relative; z-index:1; }
 </style></head><body>
-  ${overlay('rgba(18,26,36,0.52)')}
+  ${overlay('rgba(18,26,36,0.35)')}
   <div class="layer">
     <div class="top">${logoPill()} ${chip(s.slideNumber, total)}</div>
     <div class="content">
@@ -396,7 +396,7 @@ function factHtml(s, total, bgB64) {
   }
   .bar { height:8px; background:${C.MINT}; flex-shrink:0; position:relative; z-index:1; }
 </style></head><body>
-  ${overlay('rgba(18,26,36,0.50)')}
+  ${overlay('rgba(18,26,36,0.33)')}
   <div class="layer">
     <div class="top">${logoPill()} ${chip(s.slideNumber, total)}</div>
     <div class="content">
@@ -457,7 +457,7 @@ function ctaHtml(s, total, bgB64) {
   }
   .bar { position:absolute; bottom:0; left:0; right:0; height:8px; background:${C.MINT}; z-index:2; }
 </style></head><body>
-  ${overlay('rgba(18,26,36,0.62)')}
+  ${overlay('rgba(18,26,36,0.45)')}
   <div class="top">${logoPill()} ${chip(s.slideNumber, total)}</div>
   <div class="layer">
     <div class="divider"></div>

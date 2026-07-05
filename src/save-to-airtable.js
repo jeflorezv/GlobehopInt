@@ -161,3 +161,39 @@ export async function fetchPendingRecords() {
   });
 }
 
+/**
+ * Sets Estado to 'Aprobado' — content approved for scheduled publishing.
+ * The post will be published automatically by /publish-scheduled on the correct date.
+ */
+export async function markApproved(recordId) {
+  await patchRecord(recordId, { Estado: 'Aprobado' });
+}
+
+/**
+ * Fetches all records currently in 'Aprobado' state, sorted by publication date.
+ * Used by the review dashboard to show content approved and awaiting auto-publish.
+ */
+export async function fetchApprovedRecords() {
+  return withRetry(async () => {
+    const params = new URLSearchParams();
+    params.set('filterByFormula', "{Estado}='Aprobado'");
+    params.set('sort[0][field]', 'Fecha publicación');
+    params.set('sort[0][direction]', 'asc');
+    for (const f of [
+      'Tipo de post', 'Destino/Tema', 'Fecha publicación',
+      'URL imagen branded', 'URL imagen',
+    ]) params.append('fields[]', f);
+
+    const resp = await fetch(`${tableUrl()}?${params}`, { headers: authHeaders() });
+    if (!resp.ok) {
+      const body = await resp.text();
+      console.error(`[airtable] list approved ${resp.status} body:`, body);
+      const err  = new Error(`Airtable list failed (HTTP ${resp.status})`);
+      err.status = resp.status;
+      throw err;
+    }
+    const json = await resp.json();
+    return json.records ?? [];
+  });
+}
+

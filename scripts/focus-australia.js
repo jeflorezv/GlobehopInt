@@ -1,5 +1,6 @@
 /**
- * One-time migration: marks all non-Australia and all reel records as Omitir.
+ * One-time migration: marks all non-Australia records as Omitir.
+ * Australia records (all post types including reels) are left untouched.
  * Safe to run repeatedly — skips records already in terminal states (Publicado, Omitir).
  *
  * Usage: node scripts/focus-australia.js
@@ -53,9 +54,8 @@ for (const r of records) {
   if (TERMINAL.has(estado)) { alreadyDone++; continue; }
 
   const isAustralia = /australia/i.test(dest);
-  const isReel      = tipo === 'reel';
 
-  if (!isAustralia || isReel) {
+  if (!isAustralia) {
     process.stdout.write(`  Omitir ${r.id} [${tipo}] "${dest}" (${estado}) ... `);
     await markOmitir(r.id);
     console.log('done');

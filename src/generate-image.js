@@ -1,17 +1,18 @@
 import { withRetry } from './utils/retry.js';
 
-const IDEOGRAM_URL = 'https://api.ideogram.ai/generate';
+const IDEOGRAM_URL = 'https://api.ideogram.ai/v1/ideogram-v3/generate';
 
-// Ideogram aspect ratio tokens per post type
+// Ideogram aspect ratio tokens per post type (V3 format)
 const ASPECT_RATIO = {
-  single_photo: 'ASPECT_3_4',
-  reel:         'ASPECT_9_16',
+  single_photo: '3x4',
+  reel:         '9x16',
 };
 
 const NEGATIVE_PROMPT =
   'text, watermark, logo, overlay, smooth plastic skin, airbrushed skin, overly perfect skin, ' +
   'stock photo aesthetic, generic corporate photography, artificial studio lighting, CGI look, ' +
-  'oversaturated HDR, illustration, painting, cartoon, 3D render, blurry background, heavy bokeh';
+  'oversaturated HDR, illustration, painting, cartoon, 3D render, blurry background, heavy bokeh, ' +
+  'dark sky, night sky, stormy sky, dark dramatic clouds, overcast grey sky, rainy, foggy, gloomy weather';
 
 /**
  * Generates a single image via Ideogram from the visual prompt in ctx.
@@ -33,14 +34,11 @@ export async function generateImage(record, ctx) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        image_request: {
-          prompt:              ctx.visual,
-          negative_prompt:     NEGATIVE_PROMPT,
-          aspect_ratio:        aspectRatio,
-          model:               'V_2',
-          style_type:          'REALISTIC',
-          magic_prompt_option: 'OFF',
-        },
+        prompt:              ctx.visual,
+        negative_prompt:     NEGATIVE_PROMPT,
+        aspect_ratio:        aspectRatio,
+        style_type:          'REALISTIC',
+        magic_prompt_option: 'OFF',
       }),
     });
 

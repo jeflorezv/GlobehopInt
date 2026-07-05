@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { withRetry } from './utils/retry.js';
 import { parseJson } from './utils/parse-json.js';
 import { pickAustraliaLocation } from './utils/australia-locations.js';
+import { selectCharacter } from './utils/characters.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -57,15 +58,10 @@ Scene overlay text (the "text" field in each reel scene) must read as a Colombia
 ---
 
 GENDER CONSISTENCY (mandatory for every post)
-Before generating any content, choose the student's gender for this post and apply it everywhere:
-- student_story pillar: default to female student
-- destination_spotlight, agency_promo: default to female student for solo shots; use a mixed-gender group of 2–3 students for social scenes
-- visa_tip: group scene or single female student
-
-Apply the chosen gender to EVERY field:
-1. "visual" (main image prompt): write "young Colombian woman" or "young Colombian man" explicitly — never just "student" for a solo shot
-2. All 4 scene "visual" fields for reels: repeat the exact same gender in every prompt
-3. "hook" text: if referencing a specific person, use gender-consistent phrasing
+The CHARACTER LOCK provided in the user message determines gender. Use that gender consistently everywhere:
+1. "visual" (main image prompt): embed the CHARACTER LOCK description verbatim — this already specifies gender
+2. All 4 scene "visual" fields for reels: use the same CHARACTER LOCK description in every scene
+3. "hook" text: if referencing a specific person, use the gender from CHARACTER LOCK
 4. "caption": if telling a story in third person, use the matching gender throughout
 
 SCENE TEXT PRONOUN RULE: The overlay text printed on the video (each scene's "text" field) must NEVER use third-person pronouns él or ella. Use only:
@@ -76,9 +72,18 @@ SCENE TEXT PRONOUN RULE: The overlay text printed on the video (each scene's "te
 
 ---
 
+COST & FEE PROHIBITION — HARD RULE
+Never include any cost figure, fee amount, currency symbol, or money-formatted number in any caption, hook, or visual prompt. This means: no $, AUD, A$, USD, COP, MXN, CLP, and no digit sequences formatted as money (1,500 / 2.000.000 / 15k). No exceptions and no "approximately" framing — approximate figures are still prohibited. If the post touches costs or budgeting, describe categories only (tuition, accommodation, transport) without figures, and direct the reader to book a free consultation with GlobeHop for accurate, personalized information.
+
+VISA & PROCESS CONTENT — MANDATORY CONSULTATION REDIRECT
+Any caption or hook that references visa requirements, eligibility conditions, processing timelines, work rights, or Subclass 500 specifics must include a sentence redirecting the reader to consult GlobeHop for current, accurate information. This is mandatory — not a suggestion. Place it naturally in the body before the CTA. Requirements change regularly; never state them as settled fact.
+Example: "Los requisitos de la Subclass 500 cambian con frecuencia — en GlobeHop te decimos exactamente qué aplica a tu caso hoy."
+
+---
+
 CONTENT PILLARS
 - destination_spotlight: Showcase a study destination (country or city). Inspiring, factual, with a wow-factor detail that makes the reader want to go.
-- visa_tip: A practical, actionable visa or immigration tip. Useful, clear, reassuring. Demystify the process.
+- visa_tip: A practical, actionable visa or immigration tip. Useful, clear, reassuring. Demystify the process — but never state specific requirements, timelines, or conditions as fact. Always redirect to GlobeHop consultation for accurate details (see VISA & PROCESS CONTENT above).
 - student_story: Write from a student's perspective or as an inspirational third-person story. Personal, emotional, relatable. Make the reader see themselves in the story.
 - agency_promo: GlobeHop's value proposition, services, or unique differentiator. Confident and helpful. Focus on the student's outcome, not GlobeHop's features.
 
@@ -169,14 +174,19 @@ DESTINATION ANCHORING — always use an iconic, unmistakable landmark:
   Malta: Azure Window ruins, Valletta limestone streets, Blue Lagoon, Grand Harbour fortifications.
   (Apply same principle for any other destination.)
 
-PEOPLE & SCENE ARCHETYPES — choose the most relevant for the pillar:
-  - Group of 2–4 multicultural students laughing or talking together near the landmark (most engaging)
-  - Student studying on a laptop in a modern café: books, headphones, coffee on table
-  - Student with backpack at airport: passport in hand, departure boards in background
-  - Student looking toward a city skyline from behind — inspirational, aspirational composition
-  - Student entering a modern university building, backpack, first-day energy
-  - Friends from different backgrounds sitting on grass on campus, genuine laughter
-  - Single student in candid moment — genuine smile, not a posed stock-photo grin
+PEOPLE & SCENE ARCHETYPES — choose the most relevant for the pillar and rotate actively for variety:
+  - Group of 2–4 multicultural students laughing together near the landmark — genuine joy, arms around each other
+  - Student arms open wide facing the ocean, beach, or skyline — freedom, arrival, pure happiness
+  - Student sitting at a busy café terrace with coffee and phone — relaxed, belonging, local life
+  - Student with backpack at airport: passport in hand, huge smile at departure board
+  - Student discovering a local weekend market, pointing at something exciting — curiosity and delight
+  - Friends of different backgrounds toasting with coffee or food at a sunny outdoor table
+  - Student looking toward a city skyline from behind — aspirational but replace "serious" with warm body language
+  - Student entering a modern university building, backpack, first-day energy, smiling at classmates
+  - Single student reading on a park bench or river bank, peaceful and content, golden light
+  - Student on a rooftop or hilltop lookout, city below, wide grin to camera — life is good
+
+TONE RULE: The human subject must look genuinely happy, alive, and at home. Avoid: pensive gazing into distance, tired travel look, stiff posing. Every scene should make the viewer think "I want to be doing exactly that right now."
 
 CLOTHING RULES — always match clothing to environment:
   - Near beach or outdoor summer scene: casual summer clothes (linen, light t-shirt, shorts or sundress) — NEVER swimwear or bikinis
@@ -187,7 +197,7 @@ CLOTHING RULES — always match clothing to environment:
   - Never formal business attire unless the post is about professional programs
 
 LIGHTING & COMPOSITION:
-  - Golden hour, bright midday sun, or soft overcast daylight — always warm and inviting
+  - Golden hour, bright midday sun, or warm sunrise light — always warm and inviting. Clear blue sky or soft white clouds. NEVER dark skies, stormy sky, heavy overcast, night scenes, or dark dramatic clouds.
   - Depth of field: moderate — subject sharp, background landmark clearly visible and recognizable. No heavy bokeh. The destination must be identifiable from the background alone.
   - For 4:5 posts: portrait composition, subject in lower half, landmark filling the upper background
   - For 9:16 posts: portrait composition, person in lower two-thirds, landmark above
@@ -197,15 +207,8 @@ Write 2–3 sentences: scene + mood + specific detail that makes it feel real.
 
 ---
 
-REEL CHARACTER PROFILES (fixed — do not invent a new character. Pick the profile that fits the pillar and gender rules, then copy its description verbatim into every scene visual prompt)
-
-AU_FEMALE_01 — Young Colombian woman, 26, dark brown wavy hair falling to her shoulders, slim build, warm olive skin, neutral confident expression, smart casual clothes in earth tones (beige, white, light tan). Use for student_story and destination_spotlight pillars.
-
-AU_FEMALE_02 — Young Colombian woman, 23, short natural curly dark brown hair, athletic build, warm caramel skin tone, calm natural expression, casual clothes in navy and white. Use for visa_tip and agency_promo pillars, and for group scenes.
-
-AU_MALE_01 — Young Colombian man, 29, short dark straight hair, lean athletic build, warm tan skin tone, composed neutral expression, smart casual clothes in dark olive and grey. Use occasionally for diversity — primarily pair with AU_FEMALE_01 in group scenes.
-
-Copy the EXACT profile description (age + hair + build + skin + expression + clothing palette) into EVERY scene visual prompt without variation. The viewer must recognize the same person from scene 1 through scene 4.
+REEL CHARACTER PROFILES
+A CHARACTER LOCK is provided in the user message. Copy that description verbatim into the main "visual" field and EVERY scene visual prompt. Never invent a different character. The viewer must recognize the same person from scene 1 through scene 4. Do not add or mention the character's city or region of origin.
 
 ---
 
@@ -241,7 +244,7 @@ Rules:
 
 OUTPUT
 Respond with valid JSON only — no markdown fences, no explanation, nothing else:
-{"caption":"<Instagram caption in Spanish with hashtags>","visual":"<Ideogram prompt in English>","scenes":[{"role":"scene_hook","visual":"...","text":"Hace un año tenía miedo."},{"role":"scene_study","visual":"...","text":"Hoy estudia en Irlanda 🇮🇪"},{"role":"scene_student_life","visual":"...","text":"Nuevos amigos.\\nNuevas oportunidades."},{"role":"scene_cta","visual":"...","text":"¿Quieres estudiar en Irlanda?\\nEscribe IRLANDA 🇮🇪\\nConsulta gratuita"}],"hook":"<3-line overlay text printed on the photo in Poppins Bold. Use \\n to separate each line. THREE layers:\n\nLINE 1 — Headline hook (largest text, 4–8 words): Single biggest emotional payoff of going abroad. Bold statement or punchy question. Sell the transformation — NOT the destination. The photo already shows where. Up to 8 words.\nLINE 2 — Supporting line (medium text, 6–12 words): One sentence of context that deepens LINE 1. What changed. How their life transformed. A contrasting before/after. Complements the headline without repeating it.\nLINE 3 — CTA (medium text, 3–6 words): Keyword-trigger DM action. No emojis. Always use destination name inside guillemets — drives ManyChat automation: 'Escribe «IRLANDA»' | 'Escribe «AUSTRALIA» al DM' | 'DM «QUIERO IR»' | 'Escribe «MALTA»'\n\nPhilosophy: People don't want Australia. They want what Australia represents — freedom, growth, a better self. Sell the transformation, not the geography.\n\nModel examples — study the 3-line rhythm:\n'La mejor versión de ti está aquí.\\nUn vuelo te separa de quien puedes ser.\\nEscribe «AUSTRALIA» al DM'\n'¿Y si dentro de un año fueras diferente?\\nMiles de colombianos ya dieron ese paso.\\nEscribe «INFO» hoy'\n'Hace un año ella también dudaba.\\nHoy vive en Irlanda y no volvería atrás.\\nEscribe «IRLANDA»'\n'La decisión más difícil no es viajar.\\nEs animarte a empezar. El resto lo hacemos juntos.\\nDM «QUIERO IR»'\n\nNever use ALL CAPS. Use guillemets «» for keywords, never ASCII quotes. No hashtags. No flag emojis. Never repeat the country name in LINE 1 or LINE 2 — it's in the photo.>"}
+{"caption":"<Instagram caption in Spanish with hashtags>","visual":"<Ideogram prompt in English>","scenes":[{"role":"scene_hook","visual":"...","text":"Hace un año tenía miedo."},{"role":"scene_study","visual":"...","text":"Hoy estudia en Irlanda 🇮🇪"},{"role":"scene_student_life","visual":"...","text":"Nuevos amigos.\\nNuevas oportunidades."},{"role":"scene_cta","visual":"...","text":"¿Quieres estudiar en Irlanda?\\nEscribe IRLANDA 🇮🇪\\nConsulta gratuita"}],"hook":"<3-line overlay text printed on the photo in Poppins Bold. Use \\n to separate each line. THREE layers:\n\nLINE 1 — Headline hook (largest text, 4–8 words): Single biggest emotional payoff of going abroad. Bold statement or punchy question. Sell the transformation — NOT the destination. The photo already shows where. Up to 8 words.\nLINE 2 — Supporting line (medium text, 6–12 words): One sentence of context that deepens LINE 1. What changed. How their life transformed. A contrasting before/after. Complements the headline without repeating it.\nLINE 3 — CTA (medium text, 3–6 words): Keyword-trigger DM action. No emojis. Always use destination name inside guillemets — drives ManyChat automation: 'Escribe «IRLANDA»' | 'Escribe «AUSTRALIA» al DM' | 'DM «QUIERO IR»' | 'Escribe «MALTA»'\n\nPhilosophy: People don't want Australia. They want what Australia represents — freedom, growth, a better self. Sell the transformation, not the geography.\n\nModel examples — study the 3-line rhythm. Mix transformation, happiness, and lifestyle freely:\n'La mejor versión de ti está aquí.\\nUn vuelo te separa de quien puedes ser.\\nEscribe «AUSTRALIA» al DM'\n'¿Y si dentro de un año fueras diferente?\\nMiles de colombianos ya dieron ese paso.\\nEscribe «INFO» hoy'\n'Hace un año ella también dudaba.\\nHoy vive en Irlanda y no volvería atrás.\\nEscribe «IRLANDA»'\n'Despertarse en Sídney un martes normal.\\nAsí es la vida de los que se animaron.\\nEscribe «AUSTRALIA» al DM'\n'Nuevos amigos. Nuevo idioma. Nueva vida.\\nAustralia lo tiene todo esperándote.\\nEscribe «AUSTRALIA»'\n'El sol de Melbourne en un miércoles cualquiera.\\nParece mentira hasta que lo vives tú.\\nDM «AUSTRALIA»'\n'Estudiar, explorar y crecer al mismo tiempo.\\nEso es exactamente lo que pasa aquí.\\nEscribe «AUSTRALIA» al DM'\n'Un café en Gold Coast. Un amigo de Brasil. Una clase de inglés.\\nAsí empieza todo.\\nEscribe «AUSTRALIA»'\n\nNever use ALL CAPS. Use guillemets «» for keywords, never ASCII quotes. No hashtags. No flag emojis. Never repeat the country name in LINE 1 or LINE 2 — it's in the photo.>"}
 
 The hook appears printed directly on the photo in large Poppins Bold type. It must earn its place.
 `.trim();
@@ -263,7 +266,8 @@ export async function generateContent(record, ctx) {
   const aspect   = tipo === 'reel' ? '9:16 vertical' : '4:5';
 
   const isAustralia = /australia/i.test(tema ?? '');
-  const ausLoc = isAustralia ? pickAustraliaLocation() : null;
+  const ausLoc = isAustralia ? pickAustraliaLocation(record.id ?? '') : null;
+  const character = selectCharacter(record, pillar);
 
   const userMessage = [
     `Post type: ${tipo} (${aspect} aspect ratio)`,
@@ -272,12 +276,23 @@ export async function generateContent(record, ctx) {
     tema ? `Destination / topic: ${tema}` : 'Destination / topic: (choose a compelling example relevant to Colombian students)',
     cta ? `CTA — use this text exactly: "${cta}"` : 'CTA: (choose the most fitting from the pillar defaults in the system prompt)',
     tipo === 'reel' ? 'Include the "scenes" array (4 scene prompts: hook, study, student_life, cta — each with "visual" and "text" fields as described in REEL SCENES).' : 'Omit the "scenes" key — not needed for this post type.',
+    [
+      `CHARACTER LOCK (embed this description verbatim in the main "visual" field and every scene visual prompt — for image generation only, not captions or hooks; do not add city or region of origin):`,
+      character.prompt,
+      `CHARACTER GENDER: ${character.gender}`,
+    ].join('\n'),
     ausLoc ? [
       `CITY LOCK — MANDATORY (non-negotiable, overrides all other location guidance):`,
       `  City: ${ausLoc.city}, Australia`,
       `  Background landmark: ${ausLoc.landmark}`,
       ausLoc.exclude ? `  IMPORTANT: ${ausLoc.exclude}` : '',
       `Do NOT use any other Australian city or landmark. Every visual prompt (including all reel scenes) must be set in ${ausLoc.city} using the landmark above.`,
+      ausLoc.type === 'wildlife' ? [
+        `WILDLIFE SCENE DIRECTIVE (mandatory — this location features Australian wildlife):`,
+        `The animal described in the landmark is the primary visual subject of every scene. Feature it prominently in the foreground or at eye level.`,
+        `The CHARACTER LOCK student appears in the mid-ground, observing or standing near the animal — engaged but clearly secondary to the wildlife.`,
+        `The animal must be sharp, detailed, and unmistakably the hero of the frame. The student provides human scale and relatability, not dominance.`,
+      ].join('\n') : '',
     ].filter(Boolean).join('\n') : '',
   ].filter(Boolean).join('\n');
 

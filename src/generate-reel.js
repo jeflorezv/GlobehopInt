@@ -14,7 +14,9 @@ const NEGATIVE_PROMPT =
   'warped or fused fingers, extra or missing fingers, floating limbs, phantom limbs, disembodied arm, ' +
   'morphing or shifting background, melting architecture, unstable background, ' +
   'deformed face, distorted eyes, facial drift, expression morphing, ' +
-  'camera movement, camera shake, camera pan, camera zoom';
+  'camera movement, camera shake, camera pan, camera zoom, ' +
+  'talking, laughing mouth, mouth opening, dramatic movement, exaggerated expressions, ' +
+  'fast motion, animated gestures, big smile morphing, speaking to camera';
 
 function klingJwt() {
   const header  = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -146,6 +148,7 @@ function motionPrompt(visualPrompt) {
   return (
     `${visualPrompt} ` +
     'CAMERA FULLY LOCKED — absolutely no pan, no zoom, no push-in, no camera movement whatsoever. ' +
+    'Realistic human movement, natural physics, high realism, authentic movement, no exaggerated facial expressions. ' +
     'Micro motion only on the subject: subtle breathing, gentle natural blink, very slight hair movement from a soft breeze. ' +
     'Hands completely still and relaxed — no gesturing, no gripping, fingers not animated. ' +
     'Face stays neutral and natural — no talking, no laughing, no smiling changes, no expression morphing. ' +

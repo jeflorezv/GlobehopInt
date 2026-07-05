@@ -5,6 +5,7 @@ import { writeFile, unlink, readdir } from 'node:fs/promises';
 import path            from 'node:path';
 import { createOverlayPng, createSimpleTextPng } from './apply-brand.js';
 import { uploadVideoToCdn } from './upload-cdn.js';
+import { assertAllowedUrl } from './utils/fetch-guard.js';
 
 const execFileAsync = promisify(execFile);
 const TARGET_W      = 1080;
@@ -45,6 +46,7 @@ async function assembleSingleScene(videoUrl, hookText) {
   let overlayPath  = null;
 
   try {
+    assertAllowedUrl(videoUrl, 'apply-brand-video');
     const resp = await fetch(videoUrl);
     if (!resp.ok) throw new Error(`Failed to fetch Kling video: ${resp.status} ${videoUrl}`);
     await writeFile(rawPath, Buffer.from(await resp.arrayBuffer()));
@@ -97,6 +99,7 @@ async function assembleMultiScene(videoUrls, hookText, scenes) {
   try {
     // 1. Download all Kling clips in parallel
     await Promise.all(videoUrls.map(async (url, i) => {
+      assertAllowedUrl(url, 'apply-brand-video');
       const resp = await fetch(url);
       if (!resp.ok) throw new Error(`Failed to fetch Kling clip ${i + 1}: ${resp.status}`);
       await writeFile(rawPaths[i], Buffer.from(await resp.arrayBuffer()));

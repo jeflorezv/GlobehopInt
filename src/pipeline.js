@@ -17,9 +17,9 @@ import {
 import { sendErrorAlert } from './send-alert.js';
 
 const STEPS = {
-  single_photo: ['caption', 'humanize', 'image', 'brand', 'save'],
-  carousel:     ['caption', 'humanize', 'render', 'save'],
-  reel:         ['caption', 'humanize', 'images', 'video', 'save'],
+  single_photo: ['caption', 'check', 'humanize', 'image', 'brand', 'save'],
+  carousel:     ['caption', 'check', 'humanize', 'render', 'save'],
+  reel:         ['caption', 'check', 'humanize', 'images', 'video', 'save'],
 };
 
 /**
@@ -31,9 +31,16 @@ const STEPS = {
  */
 export async function runPipeline(recordId) {
   const record = await fetchRecord(recordId);
+  record.id = recordId; // fetchRecord returns json.fields only; restore ID for selectCharacter and pickAustraliaLocation
 
   if (record['Estado'] === 'Omitir') {
     console.log(`[pipeline] ${recordId} — skipped (Estado=Omitir)`);
+    return { skipped: true };
+  }
+
+  const destino = record['Destino/Tema'] ?? '';
+  if (!/australia/i.test(destino)) {
+    console.log(`[pipeline] ${recordId} — skipped (destination="${destino}" is not Australia — only Australia is active)`);
     return { skipped: true };
   }
 
@@ -88,6 +95,36 @@ async function runStep(stepName, tipo, record, ctx) {
         ? generateCarousel(record, ctx)
         : generateContent(record, ctx);
 
+    case 'check': {
+      const COST_PATTERNS = [
+        /\$\s*[\d,\.]+/,                   // $15,000 · $2.000.000
+        /\b[\d,\.]+\s*\$/,                  // 2.000$
+        /\b(AUD|A\$|USD|COP|MXN|CLP)\b/,   // standalone currency codes
+        /\b\d{1,3}(?:[.,]\d{3})+\b/,       // formatted numbers: 1,500 · 2.000.000
+      ];
+      const textFields = [
+        ctx.caption,
+        ctx.hook,
+        ...(ctx.slides ?? []).flatMap(s => [
+          s.headline, s.subtext, s.body, s.stat, s.statLabel,
+          ...(s.items ?? []),
+        ]),
+        ...(ctx.scenes ?? []).map(s => s.text),
+      ].filter(Boolean);
+
+      for (const pattern of COST_PATTERNS) {
+        for (const text of textFields) {
+          if (pattern.test(text)) {
+            const match = text.match(pattern)?.[0];
+            throw new Error(
+              `[check] Cost figure detected: "${match}" — regenerate this record to remove all currency symbols and monetary amounts.`
+            );
+          }
+        }
+      }
+      return ctx;
+    }
+
     case 'humanize':
       return humanizeCaption(record, ctx);
 
@@ -113,6 +150,10 @@ async function runStep(stepName, tipo, record, ctx) {
       return brandSingle(ctx, tipo);
 
     case 'video': {
+      if (ctx.videoUrl) {
+        console.log(`[pipeline] video step skipped — existing URL Video preserved`);
+        return ctx;
+      }
       if (tipo === 'reel' && ctx.scenes?.length) {
         // Upload each scene image to CDN (Kling requires public URLs)
         const cdnScenes = await Promise.all(
@@ -191,6 +232,9 @@ async function persistStep(stepName, tipo, recordId, ctx) {
         'Descripción visual': ctx.visual,
         'Hook':               ctx.hook ?? '',
       });
+
+    case 'check':
+      return saveStep(recordId, 'check', {});
 
     case 'humanize':
       return saveStep(recordId, 'humanize', { 'Caption generado': ctx.caption });

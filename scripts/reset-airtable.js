@@ -6,11 +6,14 @@ const TABLE_NAME = process.env.AIRTABLE_TABLE_NAME ?? 'Contenido Instagram';
 const AT_REST    = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
 const HEADERS    = { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' };
 
+// Each row = one week [Mon, Wed, Fri, Sat].
+// Every week contains all 4 pillars exactly once.
+// Carousel (Wed) and Reel (Fri) slots rotate through every pillar across weeks.
 const PILLAR_ROTATION = [
-  ['destination_spotlight', 'visa_tip',               'student_story',        'agency_promo'        ],
-  ['visa_tip',              'destination_spotlight',   'destination_spotlight', 'student_story'       ],
-  ['student_story',         'agency_promo',            'visa_tip',             'destination_spotlight'],
-  ['agency_promo',          'student_story',           'agency_promo',         'visa_tip'            ],
+  ['destination_spotlight', 'student_story',        'visa_tip',             'agency_promo'        ],
+  ['student_story',         'agency_promo',          'destination_spotlight', 'visa_tip'            ],
+  ['visa_tip',              'destination_spotlight', 'agency_promo',         'student_story'       ],
+  ['agency_promo',          'visa_tip',              'student_story',        'destination_spotlight'],
 ];
 
 const DAYS = [
@@ -25,7 +28,7 @@ const AUDIENCES = [
 ];
 
 const COUNTRIES = [
-  'Australia', 'Irlanda', 'Canada', 'Malta', 'España', 'Dubai', 'Estados Unidos',
+  'Australia',
 ];
 
 const CTA_BY_PILLAR = {
@@ -80,7 +83,7 @@ async function seedCalendar() {
 
       records.push({
         fields: {
-          'Fecha publicación': date.toISOString().split('T')[0],
+          'Fecha publicación': localDateStr(date),
           Día:                 nombre,
           'Tipo de post':      tipo,
           Pilar:               pilar,
@@ -107,7 +110,7 @@ async function seedCalendar() {
     console.log(`✓ Created records ${i + 1}–${Math.min(i + 10, records.length)}`);
   }
 
-  console.log(`\nSchedule starts Monday ${monday.toISOString().split('T')[0]}`);
+  console.log(`\nSchedule starts Monday ${localDateStr(monday)}`);
   console.log('Destino/Tema and CTA are pre-assigned — records are ready to trigger.');
 }
 
@@ -117,6 +120,13 @@ function nextMonday(from = new Date()) {
   d.setDate(d.getDate() + ((8 - day) % 7 || 7));
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+function localDateStr(d) {
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
 }
 
 async function main() {

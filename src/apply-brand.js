@@ -1,6 +1,7 @@
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
 import path from 'path';
+import { assertAllowedUrl } from './utils/fetch-guard.js';
 
 const LOGO_PATH    = path.resolve(process.env.LOGO_PATH ?? './assets/logo.png');
 const ICON_PATH    = path.resolve(process.env.ICON_PATH ?? './assets/icon-no-bg.png');
@@ -29,7 +30,7 @@ export async function createOverlayPng(width, height, hookText = null) {
     composites.push(layer);
   }
 
-  const iconBuf = await sharp(ICON_PATH).trim().resize(Math.round(width * 0.14)).png().toBuffer();
+  const iconBuf = await sharp(ICON_PATH).trim().resize(Math.round(width * 0.165)).png().toBuffer();
   const { width: iw, height: ih } = await sharp(iconBuf).metadata();
   const iconPad = 10;
   const iconBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
@@ -52,6 +53,7 @@ export async function createOverlayPng(width, height, hookText = null) {
 }
 
 export async function applyBrand(imageUrl, hookText = null, isReel = false) {
+  assertAllowedUrl(imageUrl, 'apply-brand');
   const resp = await fetch(imageUrl);
   if (!resp.ok) throw new Error(`Failed to fetch image: ${resp.status} ${imageUrl}`);
   const buf = Buffer.from(await resp.arrayBuffer());
@@ -228,7 +230,7 @@ export async function createSimpleTextPng(width, height, text = null) {
       <defs>
         <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stop-color="${BRAND_DARK}" stop-opacity="0"/>
-          <stop offset="100%" stop-color="${BRAND_DARK}" stop-opacity="0.70"/>
+          <stop offset="100%" stop-color="${BRAND_DARK}" stop-opacity="0.50"/>
         </linearGradient>
       </defs>
       <rect x="0" y="${softGradY}" width="${width}" height="${height - softGradY}" fill="url(#g)"/>
@@ -247,7 +249,7 @@ export async function createSimpleTextPng(width, height, text = null) {
     }
   }
 
-  const iconBuf = await sharp(ICON_PATH).trim().resize(Math.round(width * 0.14)).png().toBuffer();
+  const iconBuf = await sharp(ICON_PATH).trim().resize(Math.round(width * 0.165)).png().toBuffer();
   const { width: iw, height: ih } = await sharp(iconBuf).metadata();
   const iconPad = 10;
   const iconBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
@@ -285,10 +287,10 @@ async function buildTextOverlay(text, imgW, imgH, isReel = false) {
   const fsBody     = Math.round(imgW * 0.050);
   const fsCta      = Math.round(imgW * 0.042);
   const gap        = Math.round(fsHeadline * 0.32);
-  const pad        = Math.round(imgW / 24) + (isReel ? 200 : 120);
+  const pad        = Math.round(imgW / 24) + (isReel ? 200 : 72);
   const textW      = Math.round(imgW * 0.88);
-  const gradY      = Math.round(imgH * (isReel ? 0.58 : 0.52));
-  const gradMaxOpa = isReel ? 0.92 : 0.68;
+  const gradY      = Math.round(imgH * (isReel ? 0.58 : 0.64));
+  const gradMaxOpa = isReel ? 0.72 : 0.52;
 
   const layers = [];
   let cursorY  = imgH - pad;
