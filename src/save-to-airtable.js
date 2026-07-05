@@ -162,6 +162,40 @@ export async function fetchPendingRecords() {
 }
 
 /**
+ * Fetches the story lines of recent news_update posts so the news researcher
+ * can avoid covering the same story twice. Returns the "[news] headline — url"
+ * Notas entries (falling back to caption openings) of the last few news posts.
+ *
+ * @param {number} limit  How many recent news posts to consider
+ * @returns {Promise<string[]>}
+ */
+export async function fetchRecentNewsStories(limit = 4) {
+  return withRetry(async () => {
+    const params = new URLSearchParams();
+    params.set('filterByFormula', "AND({Pilar}='news_update', {Caption generado}!='')");
+    params.set('sort[0][field]', 'Fecha publicación');
+    params.set('sort[0][direction]', 'desc');
+    params.set('maxRecords', String(limit));
+    for (const f of ['Notas', 'Caption generado']) params.append('fields[]', f);
+
+    const resp = await fetch(`${tableUrl()}?${params}`, { headers: authHeaders() });
+    if (!resp.ok) {
+      const body = await resp.text();
+      console.error(`[airtable] list news ${resp.status} body:`, body);
+      const err  = new Error(`Airtable list failed (HTTP ${resp.status})`);
+      err.status = resp.status;
+      throw err;
+    }
+    const json = await resp.json();
+    return (json.records ?? []).map(r => {
+      const notas = r.fields['Notas'] ?? '';
+      if (notas.startsWith('[news]')) return notas;
+      return (r.fields['Caption generado'] ?? '').split('\n')[0];
+    }).filter(Boolean);
+  });
+}
+
+/**
  * Sets Estado to 'Aprobado' — content approved for scheduled publishing.
  * The post will be published automatically by /publish-scheduled on the correct date.
  */

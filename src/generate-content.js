@@ -4,6 +4,8 @@ import { parseJson } from './utils/parse-json.js';
 import { pickAustraliaLocation } from './utils/australia-locations.js';
 import { selectCharacter } from './utils/characters.js';
 import { pickTopic, pickSceneArchetype } from './utils/variety.js';
+import { researchNews } from './generate-news.js';
+import { fetchRecentNewsStories } from './save-to-airtable.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -87,6 +89,7 @@ CONTENT PILLARS
 - visa_tip: A practical, actionable visa or immigration tip. Useful, clear, reassuring. Demystify the process — but never state specific requirements, timelines, or conditions as fact. Always redirect to GlobeHop consultation for accurate details (see VISA & PROCESS CONTENT above).
 - student_story: Write from a student's perspective or as an inspirational third-person story. Personal, emotional, relatable. Make the reader see themselves in the story.
 - agency_promo: GlobeHop's value proposition, services, or unique differentiator. Confident and helpful. Focus on the student's outcome, not GlobeHop's features.
+- news_update: A current news story that matters to students or parents planning Australia (provided as NEWS LOCK in the user message). Informative but warm — translate the news into "what this means for you". Mention the source naturally in the caption ("según el Departamento de Home Affairs", "como reportó Study Australia"). NEVER copy money figures from the news — describe changes qualitatively ("subió el requisito financiero") and redirect to GlobeHop for exact, current numbers. The visual stays an aspirational Australia scene per the CITY LOCK — the news lives in the caption and hook, not the image. Hook LINE 1 = the news angle for the reader ("Australia cambió las reglas del juego"), LINE 2 = what it means for them, LINE 3 = standard DM CTA.
 
 ---
 
@@ -269,15 +272,31 @@ export async function generateContent(record, ctx) {
   const isAustralia = /australia/i.test(tema ?? '');
   const ausLoc = isAustralia ? pickAustraliaLocation(record) : null;
   const character = selectCharacter(record, pillar);
-  const topic = pickTopic(record, pillar);
   const archetype = tipo === 'single_photo' ? pickSceneArchetype(record) : null;
+
+  // news_update: research a current story (web search or team-pasted link in
+  // Notas). Falls back to the evergreen topic bank if nothing relevant exists.
+  let news = null;
+  if (pillar === 'news_update') {
+    const covered = await fetchRecentNewsStories().catch(() => []);
+    news = await researchNews(record, covered);
+  }
+  const fallbackPillar = pillar === 'news_update' ? 'visa_tip' : pillar;
+  const topic = news ? null : pickTopic(record, fallbackPillar);
 
   const userMessage = [
     `Post type: ${tipo} (${aspect} aspect ratio)`,
     `Content pillar: ${pillar}`,
     `Target audience: ${audience}`,
     tema ? `Destination / topic: ${tema}` : 'Destination / topic: (choose a compelling example relevant to Colombian students)',
-    [
+    news ? [
+      `NEWS LOCK — MANDATORY: this post covers the following current news story. Follow the news_update pillar rules in the system prompt.`,
+      `  Headline: ${news.headline}`,
+      `  Source: ${news.source} (${news.date})`,
+      `  Summary: ${news.summary}`,
+      `  Why it matters: ${news.whyItMatters}`,
+      `Translate the story into practical value for the reader. Mention the source naturally. No money figures — qualitative descriptions only, and redirect to GlobeHop for exact current details.`,
+    ].join('\n') : [
       `TOPIC LOCK — MANDATORY: this post's specific angle is: "${topic}".`,
       `Build the caption, hook, and visual around this exact angle — do not fall back to a generic "study in Australia" post.`,
       `Do not copy the model example hooks from the system prompt; write fresh lines that fit this angle.`,
@@ -340,10 +359,11 @@ export async function generateContent(record, ctx) {
 
   return {
     ...ctx,
-    caption: parsed.caption,
-    visual:  parsed.visual,
-    hook:    parsed.hook ?? null,
-    scenes:  parsed.scenes ?? null,
+    caption:  parsed.caption,
+    visual:   parsed.visual,
+    hook:     parsed.hook ?? null,
+    scenes:   parsed.scenes ?? null,
+    newsMeta: news ? `[news] ${news.headline} — ${news.url ?? news.source} (${news.date})` : null,
   };
 }
 

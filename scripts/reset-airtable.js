@@ -36,6 +36,7 @@ const CTA_BY_PILLAR = {
   visa_tip:              'Escríbenos por DM',
   student_story:         'Escríbenos por DM',
   agency_promo:          'Agenda tu consultoría gratuita',
+  news_update:           'Escríbenos por DM',
 };
 
 async function fetchAllRecordIds() {
@@ -78,7 +79,11 @@ async function seedCalendar() {
       const { offset, nombre, tipo } = DAYS[dayIdx];
       const date   = new Date(monday);
       date.setDate(monday.getDate() + week * 7 + offset);
-      const pilar  = PILLAR_ROTATION[week][dayIdx];
+      // Every 2nd week the Saturday single_photo becomes a news_update post —
+      // current news for students and parents, sourced via web search at
+      // generation time (or a link the team pastes into Notas beforehand).
+      const isNewsSlot = dayIdx === 3 && week % 2 === 1;
+      const pilar  = isNewsSlot ? 'news_update' : PILLAR_ROTATION[week][dayIdx];
       const pais   = COUNTRIES[countryIdx % COUNTRIES.length];
 
       records.push({

@@ -231,6 +231,8 @@ async function persistStep(stepName, tipo, recordId, ctx) {
         'Caption generado':   ctx.caption,
         'Descripción visual': ctx.visual,
         'Hook':               ctx.hook ?? '',
+        // news_update: store the covered story so future runs can avoid repeats
+        ...(ctx.newsMeta ? { Notas: ctx.newsMeta } : {}),
       });
 
     case 'check':
