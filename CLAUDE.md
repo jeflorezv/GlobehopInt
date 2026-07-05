@@ -79,12 +79,15 @@ instagram-automation/
 | GET | `/health` | none | Uptime check |
 | POST | `/generate-next` | `X-Webhook-Secret` | Find today's En cola record and run pipeline |
 | POST | `/generate` | `X-Webhook-Secret` | Run pipeline for a specific `recordId` |
-| POST | `/publish` | `X-Webhook-Secret` | Publish an Aprobado record to Instagram |
+| POST | `/publish` | `X-Webhook-Secret` | Publish an Aprobado record to Instagram (manual, ignores date) |
+| POST | `/publish-scheduled` | `X-Webhook-Secret` | Publish all Aprobado records due today or earlier (Make.com Mon/Wed/Fri/Sat 8am Bogotá) |
 | GET | `/retry/:recordId` | HMAC token (email link) | Resume a failed pipeline |
 | **GET** | **`/review`** | **`?token=REVIEW_PASSWORD`** | **Marketing team dashboard** |
 | **GET** | **`/review/:recordId`** | **`?token=REVIEW_PASSWORD`** | **Full post preview** |
-| **POST** | **`/review/:recordId/approve`** | **form body `reviewToken`** | **Publish + mark Publicado** |
+| **POST** | **`/review/:recordId/approve`** | **form body `reviewToken`** | **Mark Aprobado (publishes immediately if the date already passed)** |
 | **POST** | **`/review/:recordId/reject`** | **form body `reviewToken`** | **Mark Omitir** |
+
+**Airtable date filter pitfall:** never compare `{Fecha publicación}` directly against a `'YYYY-MM-DD'` string — the comparison fails on the equality day (the field renders as a full datetime). Always wrap: `DATETIME_FORMAT({Fecha publicación}, 'YYYY-MM-DD') <= '...'`.
 | GET | `/images/:filename` | none (rate-limited) | Serve branded images from /tmp |
 
 ### Web Review Dashboard (marketing team)
@@ -96,7 +99,7 @@ Flow:
 2. SendGrid alert email sent with link to dashboard
 3. Team opens the dashboard URL (bookmark it)
 4. Click a post card → full preview (image/carousel/caption/hook)
-5. **Aprobar y Publicar** → posts immediately to Instagram → Estado: `Publicado`
+5. **Aprobar** → Estado: `Aprobado` → `/publish-scheduled` posts it at 8am Bogotá on its date. If the date already passed, the approve handler publishes immediately in the background.
 6. **Rechazar** → Estado: `Omitir` (removed from queue)
 
 ---
@@ -246,14 +249,24 @@ Both `generate-content.js` (single_photo/reel) and `generate-carousel.js` use `s
 
 Defined in `src/utils/australia-locations.js`. 22 locations across Melbourne, Brisbane, Perth, Adelaide, Gold Coast, Cairns, Sydney, Hobart, Darwin, and Kangaroo Island.
 
-**Selection logic (`pickAustraliaLocation(recordId)`):**
-- Deterministic hash of the Airtable record ID (`charSum % 22`) — no in-memory state, deploy-restart safe
-- Same record always maps to the same location (idempotent retries work correctly)
-- Different record IDs spread naturally across all 22 locations
+**Selection logic (`pickAustraliaLocation(record)`):**
+- Deterministic from the record's `Fecha publicación`: week Monday hash + day slot (Mon/Wed/Fri/Sat → 0–3), slots spaced 5 indexes apart — the 4 posts of any week always land in **4 different cities**, and the set rotates week over week
+- Same record always maps to the same location (idempotent retries work correctly); no in-memory state, deploy-restart safe
+- Falls back to a record-ID hash if the record has no publish date
 - Three locations are tagged `type: 'wildlife'` (Lone Pine koala, Rottnest quokka, Kangaroo Island kangaroos)
 - Wildlife locations trigger a `WILDLIFE SCENE DIRECTIVE` in the Claude user message that makes the animal the primary visual subject and places the student character in the mid-ground
 
-`record.id` must be set before calling `pickAustraliaLocation(record.id)` — see pipeline.js note above.
+Pass the full record (fields + `.id`) — see pipeline.js note above.
+
+---
+
+## Content Variety System
+
+Defined in `src/utils/variety.js`. All picks are deterministic (idempotent retries) and salted independently so location, character, topic, and scene never correlate.
+
+- **Topic bank (`pickTopic(record, pillar)`):** 16 specific angles per pillar. Index = pillar hash + Monday-anchored week counter → the same pillar cycles through all 16 angles before repeating (16 weeks). Injected as `TOPIC LOCK` (generate-content) / `ÁNGULO ESPECÍFICO` (generate-carousel).
+- **Scene archetypes (`pickSceneArchetype(record)`):** 10 visual archetypes rotated per record, injected as `SCENE ARCHETYPE LOCK` for single_photo posts.
+- **Shared hash (`hashStr`):** FNV-1a — replaces the old character-sum hash whose collisions produced posts with identical city + character pairs.
 
 ---
 
