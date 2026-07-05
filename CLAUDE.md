@@ -8,6 +8,7 @@ Automated pipeline publishing 4 Instagram posts/week (Mon/Wed/Fri/Sat, 8am Bogot
 
 - **Active destination:** Australia only — all other destinations set to `Omitir`
 - **Active post types:** `single_photo`, `carousel`, and `reel`
+- **News posts:** every 2nd week the Saturday single_photo is pillar `news_update` — grounded in current news via web search (see Content Variety System)
 - **Reels:** active — Kling v2-1 pro, 4 scenes × 5s = 20s, quality validated
 - **Approval flow:** marketing team uses the web review dashboard (see below)
 
@@ -267,6 +268,16 @@ Defined in `src/utils/variety.js`. All picks are deterministic (idempotent retri
 - **Topic bank (`pickTopic(record, pillar)`):** 16 specific angles per pillar. Index = pillar hash + Monday-anchored week counter → the same pillar cycles through all 16 angles before repeating (16 weeks). Injected as `TOPIC LOCK` (generate-content) / `ÁNGULO ESPECÍFICO` (generate-carousel).
 - **Scene archetypes (`pickSceneArchetype(record)`):** 10 visual archetypes rotated per record, injected as `SCENE ARCHETYPE LOCK` for single_photo posts.
 - **Shared hash (`hashStr`):** FNV-1a — replaces the old character-sum hash whose collisions produced posts with identical city + character pairs.
+
+### News posts (`news_update` pillar)
+
+`src/generate-news.js` runs a research phase before generation using the Anthropic `web_search` server tool:
+- Finds one story from the last ~14 days relevant to Colombian students/parents (visa policy, intakes, scholarships, work rules, cost of living, safety)
+- **Hybrid sourcing:** if the team pastes an article URL into the record's `Notas` field before generation, that story is used instead of searching
+- The story is injected into `generate-content.js` as a `NEWS LOCK`; the caption mentions the source naturally, never copies money figures (the `check` step blocks them), and always redirects to GlobeHop for exact details
+- The covered story is written back to `Notas` as `[news] headline — url`; `fetchRecentNewsStories()` feeds these into future runs so stories don't repeat
+- If no relevant story is found, the post falls back to the `visa_tip` topic bank
+- Seeding: `reset-airtable.js` marks every 2nd-week Saturday as `news_update`; the Pilar single-select option was created via `typecast: true` (the Meta API cannot edit select choices)
 
 ---
 
