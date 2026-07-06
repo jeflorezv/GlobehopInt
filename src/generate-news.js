@@ -1,9 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { withRetry } from './utils/retry.js';
 import { parseJson } from './utils/parse-json.js';
+import { getSourcesReferenceBlock } from './utils/sources.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL  = 'claude-sonnet-4-6';
+
+const sourcesBlock = getSourcesReferenceBlock();
 
 const SYSTEM = `
 You are a news researcher for GlobeHop, a Colombian international education agency. Your job: find ONE recent news story genuinely useful for Colombian students (and their parents) who are planning to study in Australia.
@@ -21,7 +24,10 @@ RULES:
 - Skip stories already covered (a list of previously covered stories may be provided).
 - Skip purely political/polemic stories with no practical impact on students.
 - If genuinely nothing relevant is found, return {"none": true}.
-
+${sourcesBlock ? `
+KNOWN RELIABLE SOURCES — check these first and prefer them when the story overlaps; they are official/reputable but may not always have the freshest headline, so general web search is still expected:
+${sourcesBlock}
+` : ''}
 OUTPUT — valid JSON only, no markdown fences, no explanation:
 {"headline": "<original headline>", "source": "<publication name>", "date": "<YYYY-MM-DD>", "url": "<article url>", "summary": "<4-6 sentence summary in Spanish covering what changed and the practical impact for Colombian students or parents>", "whyItMatters": "<1-2 sentences in Spanish: why a Colombian family planning to study in Australia should care>"}
 `.trim();

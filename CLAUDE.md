@@ -279,6 +279,13 @@ Defined in `src/utils/variety.js`. All picks are deterministic (idempotent retri
 - If no relevant story is found, the post falls back to the `visa_tip` topic bank
 - Seeding: `reset-airtable.js` marks every 2nd-week Saturday as `news_update`; the Pilar single-select option was created via `typecast: true` (the Meta API cannot edit select choices)
 
+### Curated reference sources (`src/utils/sources.js`)
+
+Team-maintained list at `docs/latam_students_australia_sources.md` (official Australian government stats, university/testimonial pages, news coverage) — parsed once at module load into `getSourcesReferenceBlock()`. Team edits the markdown; no code change or redeploy needed for the content to take effect on the next process restart.
+- `generate-news.js`: injected into the system prompt as "KNOWN RELIABLE SOURCES" — Claude prioritizes/cross-checks these before general web search when researching a `news_update` story
+- `generate-content.js`: injected as an optional "REFERENCE SOURCES" block for `destination_spotlight`, `student_story`, and `agency_promo` pillars only (never `visa_tip`, which already forbids stating specifics as fact; never `news_update`, which has its own dedicated NEWS LOCK) — Claude may ground one detail if it fits the TOPIC LOCK angle, must paraphrase (no URLs, no exact figures), and must never represent the Maria-from-Colombia story or YouTube testimonial video as an actual GlobeHop client
+- Returns `''` if the doc is missing/unparsable — grounding is optional, never blocks generation
+
 ---
 
 ## Additional Documentation
@@ -291,3 +298,4 @@ Defined in `src/utils/variety.js`. All picks are deterministic (idempotent retri
 | Webhook endpoints + Instagram publishing flows | `docs/superpowers/specs/2026-06-03-instagram-automation-design.md:134-165` |
 | Video quality improvement guidelines | `Review/GlobeHop_Video_Changes.md` |
 | Character profiles reference | `Review/GlobeHop_Character_Library.md` |
+| Curated LatAm→Australia source list | `docs/latam_students_australia_sources.md` |

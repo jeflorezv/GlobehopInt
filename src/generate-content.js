@@ -6,6 +6,12 @@ import { selectCharacter } from './utils/characters.js';
 import { pickTopic, pickSceneArchetype } from './utils/variety.js';
 import { researchNews } from './generate-news.js';
 import { fetchRecentNewsStories } from './save-to-airtable.js';
+import { getSourcesReferenceBlock } from './utils/sources.js';
+
+// Pillars where a real external reference can add credibility. Excludes
+// visa_tip (never states specifics as fact) and news_update (already grounded
+// via its own NEWS LOCK).
+const SOURCE_GROUNDED_PILLARS = new Set(['destination_spotlight', 'student_story', 'agency_promo']);
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -283,6 +289,7 @@ export async function generateContent(record, ctx) {
   }
   const fallbackPillar = pillar === 'news_update' ? 'visa_tip' : pillar;
   const topic = news ? null : pickTopic(record, fallbackPillar);
+  const sourcesReference = SOURCE_GROUNDED_PILLARS.has(pillar) ? getSourcesReferenceBlock() : '';
 
   const userMessage = [
     `Post type: ${tipo} (${aspect} aspect ratio)`,
@@ -304,6 +311,11 @@ export async function generateContent(record, ctx) {
     archetype ? [
       `SCENE ARCHETYPE LOCK — base the main "visual" on this scene (adapted to the CITY LOCK location and TOPIC angle):`,
       archetype,
+    ].join('\n') : '',
+    (SOURCE_GROUNDED_PILLARS.has(pillar) && sourcesReference) ? [
+      `REFERENCE SOURCES (optional) — real sources you may draw one detail from ONLY if it naturally fits the TOPIC LOCK angle; skip entirely if it doesn't fit:`,
+      sourcesReference,
+      `Never mention a URL or publication name, never state an exact figure as fact (qualitative only, e.g. "cada vez más colombianos eligen Australia"), and never quote or represent the student-story/testimonial sources as GlobeHop's own client — they are tone and inspiration only, not a real GlobeHop student.`,
     ].join('\n') : '',
     cta ? `CTA — use this text exactly: "${cta}"` : 'CTA: (choose the most fitting from the pillar defaults in the system prompt)',
     tipo === 'reel' ? 'Include the "scenes" array (4 scene prompts: hook, study, student_life, cta — each with "visual" and "text" fields as described in REEL SCENES).' : 'Omit the "scenes" key — not needed for this post type.',
