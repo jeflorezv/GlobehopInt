@@ -239,7 +239,11 @@ Both `generate-content.js` (single_photo/reel) and `generate-carousel.js` use `s
 
 **Group scenes:** the system prompt's GROUP SCENE DIVERSITY RULE (in `generate-content.js`) governs any scene with more than one person (the "Group of 2–4 multicultural students" / "Friends of different backgrounds" archetypes, or the reel's `scene_student_life`): the CHARACTER LOCK person is exactly one of the people in frame, and every other person must visibly read as a different international background — never a clone of the same face, never additional Colombian-looking people.
 
-**Wildlife realism:** `generate-image.js`'s negative prompt blocks `plastic figure, toy figurine, statue, taxidermy, stuffed animal, doll-like animal`; the WILDLIFE SCENE DIRECTIVE in `generate-content.js` additionally asserts the animal must read as a real, living creature in National-Geographic-style wildlife photography.
+**Wildlife realism:** the shared negative prompt (see below) blocks `plastic figure, toy figurine, statue, taxidermy, stuffed animal, doll-like animal`; the WILDLIFE SCENE DIRECTIVE in `generate-content.js` additionally asserts the animal must read as a real, living creature in National-Geographic-style wildlife photography.
+
+**Age:** GlobeHop's audience is young people, so every human subject must render as clearly 20s, never older. All character profile ages are 23-28 and avoid "mature"-type wording that was previously pushing Ideogram toward middle-aged looking renders (grey hair, deep wrinkles) regardless of the stated number. Both `generate-content.js` and `generate-carousel.js` also carry an explicit AGE rule overriding any stated age, as a backstop.
+
+**Shared negative prompt (`src/utils/negative-prompt.js`):** `BASE_NEGATIVE_PROMPT` is the single source of truth for Ideogram negative prompts, imported by both `generate-image.js` (single_photo/reel) and `render-carousel.js` (carousel slide backgrounds) — these used to be two independently-maintained near-duplicate strings that drifted out of sync (realism/signage/age fixes landed in one but not the other). Update this one file when tuning image realism; both post-type families pick it up automatically.
 
 ---
 

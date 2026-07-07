@@ -26,7 +26,7 @@ const FEMALE_PROFILES = [
   // CO_FEMALE_BARRANQUILLA_02
   '23-year-old Colombian woman, sun-kissed medium tan skin with a soft dewy sheen, voluminous dark brown curly Afro-textured hair, wide-set amber-brown eyes, soft natural facial contours, casual white t-shirt, dark denim overalls, authentic Caribbean Colombian appearance, real documentary photography, vibrant natural daylight, real skin texture with subtle moles, unedited look, candid outdoor moment',
   // CO_FEMALE_BOGOTA_01
-  '30-year-old Colombian woman, light olive skin, dark brown straight hair, brown eyes, mature focused expression, casual-professional student clothing with jacket, realistic Colombian appearance, documentary photography, natural lighting, visible skin texture, candid educational campaign',
+  '27-year-old Colombian woman, light olive skin, dark brown straight hair, brown eyes, confident focused expression, casual-professional student clothing with jacket, realistic Colombian appearance, documentary photography, natural lighting, visible skin texture, candid educational campaign',
   // CO_FEMALE_BOGOTA_02
   '24-year-old Colombian woman, fair skin with natural rosy cheeks, thick natural dark eyebrows, striking light hazel-green eyes, long straight dense jet-black hair framing her face, open genuine happy smile, yellow Colombia football jersey, casual student setting, authentic Colombian appearance, photojournalistic style, natural direct daylight, visible skin texture and natural imperfections, candid moment',
   // CO_FEMALE_CARTAGENA_01
@@ -41,7 +41,7 @@ const MALE_PROFILES = [
   // CO_MALE_MEDELLIN_01
   '27-year-old Colombian man, light-medium olive skin, short dark brown hair, brown eyes, average-athletic build, calm friendly expression, casual modern student clothing, authentic Colombian appearance, realistic photography, documentary style, natural skin texture, candid student lifestyle',
   // CO_MALE_MEDELLIN_02
-  '30-year-old Colombian man, light-medium warm olive skin, short slightly wavy dark brown hair with natural volume, brown eyes, light natural beard stubble, average-athletic build, smart casual clothing with open-collar shirt and simple jacket, confident relaxed expression, authentic Colombian appearance, documentary photography, soft natural light, visible skin pores, candid education campaign',
+  '28-year-old Colombian man, light-medium warm olive skin, short slightly wavy dark brown hair with natural volume, brown eyes, light natural beard stubble, average-athletic build, smart casual clothing with open-collar shirt and simple jacket, confident relaxed expression, authentic Colombian appearance, documentary photography, soft natural light, visible skin pores, candid education campaign',
   // CO_MALE_CALI_01
   '29-year-old Colombian man, warm medium brown skin, short dark hair, brown eyes, athletic build, confident expression, casual sporty student clothing with backpack, authentic Latin American appearance, documentary photography, natural lighting, real skin texture, candid lifestyle moment',
   // CO_MALE_CALI_02
@@ -51,7 +51,7 @@ const MALE_PROFILES = [
   // CO_MALE_BARRANQUILLA_02
   '25-year-old Colombian man, medium brown skin with warm golden undertones, short black curly hair with a natural textured top, dark brown eyes, strong average-athletic build, relaxed casual student clothing, green button-up shirt, simple accessories, genuine warm smile, authentic Caribbean Colombian appearance, documentary photography, natural daylight, visible pores, candid student lifestyle',
   // CO_MALE_BOGOTA_01
-  '32-year-old Colombian man, light olive skin, short dark brown hair, brown eyes, mature career-focused expression, casual-professional clothing with jacket, realistic Colombian appearance, documentary photography, natural lighting, visible skin texture, candid education campaign',
+  '27-year-old Colombian man, light olive skin, short dark brown hair, brown eyes, confident career-focused expression, casual-professional clothing with jacket, realistic Colombian appearance, documentary photography, natural lighting, visible skin texture, candid education campaign',
   // CO_MALE_BOGOTA_02
   '23-year-old Colombian man, light olive skin with soft rosy undertones, thick dark brown hair in a youthful side-swept style, brown eyes, slim-average build, casual student clothing, light blue button-up shirt, jeans and backpack, curious determined expression, authentic Colombian appearance, documentary photography, natural outdoor daylight, real skin texture, candid education moment',
   // CO_MALE_BUCARAMANGA_01

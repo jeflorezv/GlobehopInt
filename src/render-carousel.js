@@ -5,17 +5,14 @@ import { fileURLToPath } from 'node:url';
 import { uploadToCdn } from './upload-cdn.js';
 import { withRetry } from './utils/retry.js';
 import { assertAllowedUrl } from './utils/fetch-guard.js';
+import { BASE_NEGATIVE_PROMPT } from './utils/negative-prompt.js';
 
 const __dirname    = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS       = path.resolve(__dirname, '../assets');
 const FONTS_DIR    = path.join(ASSETS, 'fonts');
 const IDEOGRAM_URL = 'https://api.ideogram.ai/v1/ideogram-v3/generate';
 
-const NEGATIVE_PROMPT =
-  'text, watermark, logo, overlay, smooth plastic skin, airbrushed skin, overly perfect skin, ' +
-  'stock photo aesthetic, generic corporate photography, artificial studio lighting, CGI look, ' +
-  'oversaturated HDR, illustration, painting, cartoon, 3D render, blurry background, heavy bokeh, ' +
-  'dark sky, night sky, stormy sky, dark dramatic clouds, overcast grey sky, rainy, foggy, gloomy weather';
+const NEGATIVE_PROMPT = BASE_NEGATIVE_PROMPT;
 
 // Loaded once at startup and cached for all render calls.
 const [NEXA_HEAVY, NEXA_LIGHT, POPPINS_BOLD, LOGO_B64, ICON_B64] = await Promise.all([
