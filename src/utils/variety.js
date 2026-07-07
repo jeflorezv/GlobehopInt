@@ -122,7 +122,7 @@ const MS_PER_WEEK = 7 * 24 * 3600 * 1000;
 // Continuous week counter anchored to the week's Monday — every post of one
 // calendar week shares the same index and consecutive weeks differ by exactly
 // 1, so a 16-topic pool cycles through all angles before any repeat.
-function weekIndex(dateStr) {
+export function weekIndex(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number);
   const date = new Date(y, m - 1, d);
   const monday = new Date(y, m - 1, d - ((date.getDay() + 6) % 7));

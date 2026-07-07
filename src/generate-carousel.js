@@ -104,7 +104,7 @@ export async function generateCarousel(record, ctx) {
 
   const isAustralia = /australia/i.test(destino);
   const ausLoc = isAustralia ? pickAustraliaLocation(record) : null;
-  const character = selectCharacter(record, pillar);
+  const character = selectCharacter(record);
   const topic = pickTopic(record, pillar);
 
   const userMessage = [

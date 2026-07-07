@@ -12,7 +12,8 @@ const NEGATIVE_PROMPT =
   'text, watermark, logo, overlay, smooth plastic skin, airbrushed skin, overly perfect skin, ' +
   'stock photo aesthetic, generic corporate photography, artificial studio lighting, CGI look, ' +
   'oversaturated HDR, illustration, painting, cartoon, 3D render, blurry background, heavy bokeh, ' +
-  'dark sky, night sky, stormy sky, dark dramatic clouds, overcast grey sky, rainy, foggy, gloomy weather';
+  'dark sky, night sky, stormy sky, dark dramatic clouds, overcast grey sky, rainy, foggy, gloomy weather, ' +
+  'plastic figure, toy figurine, statue, taxidermy, stuffed animal, doll-like animal';
 
 /**
  * Generates a single image via Ideogram from the visual prompt in ctx.

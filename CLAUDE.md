@@ -219,21 +219,20 @@ All image prompts must produce **clear blue sky, bright sunshine, or warm sunris
 
 ## Colombian Character Library
 
-Character profiles are defined in `src/utils/characters.js`. Full profiles are sourced from `Review/GlobeHop_Character_Library.md`. They are injected into image prompts only (not captions or hooks) via a `CHARACTER LOCK` block in the Claude user message.
+Character profiles are defined in `src/utils/characters.js`. Full profiles are sourced from `Review/GlobeHop_Female_Male_Character_Library.md` (11 female + 12 male profiles across 7 Colombian regions — Medellín, Cali, Barranquilla, Bogotá, Cartagena, Pereira, Bucaramanga). They are injected into image prompts only (not captions or hooks) via a `CHARACTER LOCK` block in the Claude user message.
 
-**Selection logic (`selectCharacter(record, pillar)`):**
+**Selection logic (`selectCharacter(record)`):**
 - `record.id` is set explicitly in `pipeline.js` (`record.id = recordId`) because `fetchRecord()` returns only fields (no `.id`). This must be present for gender alternation to work.
-- Gender alternates deterministically per Airtable record ID (charSum % 2) — roughly 50/50 across posts
-- Pillar maps to a character pool:
-  - `destination_spotlight` → lifestyle profiles (indices 0–2)
-  - `student_story` → relatable profiles (indices 0, 5 female / 0, 4 male)
-  - `visa_tip` → approachable profiles (indices 1, 5 female / 1, 4 male)
-  - `agency_promo` → professional profiles (indices 3, 0)
-- 6 female profiles + 5 male profiles = 11 total
-- **No city or region of origin is included in any prompt** — appearance descriptors only
+- Gender alternates deterministically per Airtable record ID (`hashStr('char:' + id) % 2`) — roughly 50/50 across posts
+- All pillars share the same full profile pool (no per-pillar subsetting). The profile index rotates through every regional profile via the publish week — same mechanism as `pickTopic` — so every region cycles through before any repeat; falls back to a record-ID hash when there's no parseable publish date
+- **No city or region of origin is included in the prompt text** — appearance descriptors only (region is tracked only via the `// CO_FEMALE_MEDELLIN_02`-style comment above each profile, for traceability back to the source file)
 - Each profile includes photography style anchors (`authentic Colombian appearance`, `documentary photography`, `natural skin texture`, etc.) to prevent Ideogram from rendering generic AI faces
 
-Both `generate-content.js` (single_photo/reel) and `generate-carousel.js` use `selectCharacter()`.
+Both `generate-content.js` (single_photo/reel) and `generate-carousel.js` use `selectCharacter(record)`.
+
+**Group scenes:** the system prompt's GROUP SCENE DIVERSITY RULE (in `generate-content.js`) governs any scene with more than one person (the "Group of 2–4 multicultural students" / "Friends of different backgrounds" archetypes, or the reel's `scene_student_life`): the CHARACTER LOCK person is exactly one of the people in frame, and every other person must visibly read as a different international background — never a clone of the same face, never additional Colombian-looking people.
+
+**Wildlife realism:** `generate-image.js`'s negative prompt blocks `plastic figure, toy figurine, statue, taxidermy, stuffed animal, doll-like animal`; the WILDLIFE SCENE DIRECTIVE in `generate-content.js` additionally asserts the animal must read as a real, living creature in National-Geographic-style wildlife photography.
 
 ---
 
@@ -297,5 +296,5 @@ Team-maintained list at `docs/latam_students_australia_sources.md` (official Aus
 | Content system: post types, pillars, audiences, CTAs | `docs/superpowers/specs/2026-06-03-instagram-automation-design.md:96-130` |
 | Webhook endpoints + Instagram publishing flows | `docs/superpowers/specs/2026-06-03-instagram-automation-design.md:134-165` |
 | Video quality improvement guidelines | `Review/GlobeHop_Video_Changes.md` |
-| Character profiles reference | `Review/GlobeHop_Character_Library.md` |
+| Character profiles reference | `Review/GlobeHop_Female_Male_Character_Library.md` |
 | Curated LatAm→Australia source list | `docs/latam_students_australia_sources.md` |

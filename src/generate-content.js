@@ -198,6 +198,8 @@ PEOPLE & SCENE ARCHETYPES — choose the most relevant for the pillar and rotate
 
 TONE RULE: The human subject must look genuinely happy, alive, and at home. Avoid: pensive gazing into distance, tired travel look, stiff posing. Every scene should make the viewer think "I want to be doing exactly that right now."
 
+GROUP SCENE DIVERSITY RULE: Whenever a scene includes more than one person — the "Group of 2–4 multicultural students" archetype, the "Friends of different backgrounds" archetype, or the reel's scene_student_life — the CHARACTER LOCK person described in the user message is exactly ONE of the people in frame; keep their described appearance exactly as given. Every other person in that same frame must visibly read as a different international background (e.g. East Asian, South Asian, European, Middle Eastern, African, etc.) — vary it naturally across posts. Never clone the CHARACTER LOCK description onto them and never make them look Colombian too.
+
 CLOTHING RULES — always match clothing to environment:
   - Near beach or outdoor summer scene: casual summer clothes (linen, light t-shirt, shorts or sundress) — NEVER swimwear or bikinis
   - Wildlife sanctuary, national park, bush, or rainforest setting: casual outdoor clothes (light jeans or casual pants, clean walking shoes, breathable t-shirt or casual shirt) — NOT beachwear, NOT formal
@@ -277,7 +279,7 @@ export async function generateContent(record, ctx) {
 
   const isAustralia = /australia/i.test(tema ?? '');
   const ausLoc = isAustralia ? pickAustraliaLocation(record) : null;
-  const character = selectCharacter(record, pillar);
+  const character = selectCharacter(record);
   const archetype = tipo === 'single_photo' ? pickSceneArchetype(record) : null;
 
   // news_update: research a current story (web search or team-pasted link in
@@ -335,6 +337,7 @@ export async function generateContent(record, ctx) {
         `The animal described in the landmark is the primary visual subject of every scene. Feature it prominently in the foreground or at eye level.`,
         `The CHARACTER LOCK student appears in the mid-ground, observing or standing near the animal — engaged but clearly secondary to the wildlife.`,
         `The animal must be sharp, detailed, and unmistakably the hero of the frame. The student provides human scale and relatability, not dominance.`,
+        `The animal must look like a real, living, breathing creature photographed candidly in its natural habitat — National-Geographic-style wildlife photography, natural fur/feather texture with individually visible hairs. Never a toy, plastic figure, statue, taxidermy mount, or cartoon.`,
       ].join('\n') : '',
     ].filter(Boolean).join('\n') : '',
   ].filter(Boolean).join('\n');
