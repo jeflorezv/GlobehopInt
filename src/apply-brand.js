@@ -230,7 +230,7 @@ export async function createSimpleTextPng(width, height, text = null) {
       <defs>
         <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stop-color="${BRAND_DARK}" stop-opacity="0"/>
-          <stop offset="100%" stop-color="${BRAND_DARK}" stop-opacity="0.50"/>
+          <stop offset="100%" stop-color="${BRAND_DARK}" stop-opacity="0.42"/>
         </linearGradient>
       </defs>
       <rect x="0" y="${softGradY}" width="${width}" height="${height - softGradY}" fill="url(#g)"/>
@@ -290,7 +290,7 @@ async function buildTextOverlay(text, imgW, imgH, isReel = false) {
   const pad        = Math.round(imgW / 24) + (isReel ? 200 : 72);
   const textW      = Math.round(imgW * 0.88);
   const gradY      = Math.round(imgH * (isReel ? 0.58 : 0.64));
-  const gradMaxOpa = isReel ? 0.72 : 0.52;
+  const gradMaxOpa = isReel ? 0.60 : 0.40;
 
   const layers = [];
   let cursorY  = imgH - pad;

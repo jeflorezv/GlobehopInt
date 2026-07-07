@@ -8,6 +8,7 @@ import { applyBrand }       from './apply-brand.js';
 import { applyBrandToVideo } from './apply-brand-video.js';
 import { humanizeCaption }  from './humanize-caption.js';
 import { renderCarousel }   from './render-carousel.js';
+import { stripDashes }      from './utils/text.js';
 import { uploadToCdn, uploadUrlToCdn } from './upload-cdn.js';
 import {
   fetchRecord,
@@ -125,8 +126,32 @@ async function runStep(stepName, tipo, record, ctx) {
       return ctx;
     }
 
-    case 'humanize':
-      return humanizeCaption(record, ctx);
+    case 'humanize': {
+      const humanized = await humanizeCaption(record, ctx);
+      // Deterministic safety net — Spanish copy never uses em/en dashes or
+      // spaced hyphens as punctuation. Runs here (after the last step that
+      // sets caption/hook/slides/scenes) so nothing downstream reintroduces one.
+      return {
+        ...humanized,
+        caption: stripDashes(humanized.caption),
+        hook:    stripDashes(humanized.hook),
+        slides:  (humanized.slides ?? []).map(s => ({
+          ...s,
+          headline:   stripDashes(s.headline),
+          subtext:    stripDashes(s.subtext),
+          body:       stripDashes(s.body),
+          stat:       stripDashes(s.stat),
+          statLabel:  stripDashes(s.statLabel),
+          tag:        stripDashes(s.tag),
+          keyword:    stripDashes(s.keyword),
+          action:     stripDashes(s.action),
+          offer:      stripDashes(s.offer),
+          savePrompt: stripDashes(s.savePrompt),
+          items:      (s.items ?? []).map(stripDashes),
+        })),
+        scenes: (humanized.scenes ?? []).map(s => ({ ...s, text: stripDashes(s.text) })),
+      };
+    }
 
     case 'render':
       if (tipo === 'carousel') return renderCarousel(record, ctx);

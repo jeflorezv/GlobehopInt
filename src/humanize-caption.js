@@ -16,7 +16,7 @@ PRESERVE — copy these exactly:
 - Language: Spanish, Colombian register, "tú"
 
 STRIP these patterns:
-- Em dashes (—) — replace with a comma or period
+- Em dashes (—), en dashes (–), or a hyphen surrounded by spaces ( - ) used as punctuation. Spanish doesn't use dashes this way. Replace with a comma, a period, or split into two sentences.
 - Audience labels used as copy nouns: adultos, universitarios, profesionales, padres — these are internal targeting labels, never for copy. Replace with "tú", "te", or a specific descriptor ("quien trabaja y quiere más", "quien todavía está eligiendo carrera")
 - Vague declaratives: "las razones son claras", "el proceso puede parecer intimidante", "el cambio es real"
 - Hollow openers: "¿Sabías que?", "Hoy queremos contarte", "En GlobeHop sabemos que"

@@ -201,8 +201,8 @@ Keeping these values documented so review feedback can be addressed with targete
 
 | Surface | Location | Current opacity |
 |---|---|---|
-| Single photo / reel gradient (bottom) | `apply-brand.js` `gradMaxOpa` | `0.72` (reel), `0.52` (photo) |
-| Simple scene text gradient (bottom) | `apply-brand.js` `createSimpleTextPng` | `0.50` |
+| Single photo / reel gradient (bottom) | `apply-brand.js` `gradMaxOpa` | `0.60` (reel), `0.40` (photo) |
+| Simple scene text gradient (bottom) | `apply-brand.js` `createSimpleTextPng` | `0.42` |
 | Carousel hook slide | `render-carousel.js` `hookHtml` | `0.32` |
 | Carousel statement slide | `render-carousel.js` `statementHtml` | `0.30` |
 | Carousel list slide | `render-carousel.js` `listHtml` | `0.35` |
@@ -214,6 +214,13 @@ Keeping these values documented so review feedback can be addressed with targete
 
 ### Sky and Weather Rules
 All image prompts must produce **clear blue sky, bright sunshine, or warm sunrise**. Dark skies, stormy weather, heavy overcast, and night scenes are blocked via `negative_prompt` in both `generate-image.js` and `render-carousel.js`, and the `generate-content.js` system prompt explicitly prohibits them.
+
+---
+
+## Caption Voice & Style Rules
+
+- **Aspirational framing over problem-first framing:** `generate-content.js`'s POSITIVE, ASPIRATIONAL FRAMING rule and `generate-carousel.js`'s equivalent Spanish instruction require `destination_spotlight`, `student_story`, and `agency_promo` posts to lead with Australia's appeal (lifestyle, opportunity, growth) rather than the reader's doubts or fears. Only `visa_tip` may open with a practical question. This exists because captions had converged on a repetitive "tienes preguntas/dudas" opening regardless of pillar.
+- **No em dashes or spaced hyphens in Spanish text:** Spanish doesn't use dashes as punctuation the way English does. Enforced at two levels — prompt rules in `generate-content.js`, `generate-carousel.js`, and `humanize-caption.js`, plus a deterministic safety net (`stripDashes()` in `src/utils/text.js`) applied in `pipeline.js`'s `humanize` step to caption, hook, every carousel slide field, and every reel scene's text, regardless of model compliance.
 
 ---
 

@@ -86,7 +86,7 @@ Never include any cost figure, fee amount, currency symbol, or money-formatted n
 
 VISA & PROCESS CONTENT — MANDATORY CONSULTATION REDIRECT
 Any caption or hook that references visa requirements, eligibility conditions, processing timelines, work rights, or Subclass 500 specifics must include a sentence redirecting the reader to consult GlobeHop for current, accurate information. This is mandatory — not a suggestion. Place it naturally in the body before the CTA. Requirements change regularly; never state them as settled fact.
-Example: "Los requisitos de la Subclass 500 cambian con frecuencia — en GlobeHop te decimos exactamente qué aplica a tu caso hoy."
+Example: "Los requisitos de la Subclass 500 cambian con frecuencia, y en GlobeHop te decimos exactamente qué aplica a tu caso hoy."
 
 ---
 
@@ -96,6 +96,14 @@ CONTENT PILLARS
 - student_story: Write from a student's perspective or as an inspirational third-person story. Personal, emotional, relatable. Make the reader see themselves in the story.
 - agency_promo: GlobeHop's value proposition, services, or unique differentiator. Confident and helpful. Focus on the student's outcome, not GlobeHop's features.
 - news_update: A current news story that matters to students or parents planning Australia (provided as NEWS LOCK in the user message). Informative but warm — translate the news into "what this means for you". Mention the source naturally in the caption ("según el Departamento de Home Affairs", "como reportó Study Australia"). NEVER copy money figures from the news — describe changes qualitatively ("subió el requisito financiero") and redirect to GlobeHop for exact, current numbers. The visual stays an aspirational Australia scene per the CITY LOCK — the news lives in the caption and hook, not the image. Hook LINE 1 = the news angle for the reader ("Australia cambió las reglas del juego"), LINE 2 = what it means for them, LINE 3 = standard DM CTA.
+
+---
+
+POSITIVE, ASPIRATIONAL FRAMING — MANDATORY
+Do NOT open every caption with the reader's doubts, fears, or unanswered questions ("¿Puedo trabajar mientras estudio?", "tienes preguntas", "empiezan las dudas"). That pattern has become repetitive across posts and sells GlobeHop's problem-solving instead of Australia's appeal — it reads as negative and doesn't attract new customers.
+- destination_spotlight, student_story, and agency_promo must lead with something genuinely exciting about studying or living in Australia — the lifestyle, the opportunity, the growth, the specific TOPIC LOCK angle — not with the reader's anxiety. GlobeHop's role (answering questions, guiding the process) belongs in the body or CTA, never as the opening hook or the caption's dominant theme.
+- Only visa_tip may open with a practical question, and even then pair it with an encouraging, confident tone rather than anxiety-inducing framing.
+- Vary the opening across posts: a vivid scene, a bold claim, a "what if" invitation, a piece of real inspiration — not a recurring "you probably have doubts" formula.
 
 ---
 
@@ -151,6 +159,7 @@ Hashtags
 Rules:
 - NEVER write audience segment labels (adultos, universitarios, profesionales, padres, estudiantes_secundaria) in the caption copy. These are internal targeting labels — they never appear in published text. Address the reader directly with "tú".
 - CRITICAL — JSON safety: Never use ASCII double-quote characters (") inside any caption, hook, or visual text. The output is JSON; unescaped " inside a string value breaks the parser and causes the post to fail. For quoted dialogue, use guillemets «» or typographic curly quotes " " instead.
+- NO DASHES IN SPANISH TEXT: Never use an em dash (—), en dash (–), or a hyphen surrounded by spaces ( - ) as punctuation in the caption, hook, or scene overlay text — Spanish doesn't use dashes this way. Use a comma, a period, or restructure into two sentences instead.
 - Use emojis purposefully: 1–2 in hook, emoji bullets in polls, 1 flag emoji for the destination
 - Each non-hashtag paragraph is max 2 lines
 - EVERY caption MUST end with a clear, specific call to action before the hashtags — no exceptions.
@@ -172,6 +181,10 @@ Write an Ideogram image prompt in English. Follow the GlobeHop visual style:
 - NEVER use these words (they trigger AI-looking faces): perfect skin, ultra beautiful, glamorous, fashion photography, beauty portrait, flawless, luxury model, smooth skin, perfect lighting, ultra attractive.
 - Ultra-sharp detail. Individual hair strands clearly rendered. No AI-smoothed skin. No heavy bokeh blur. Subject sharp, background landmark clearly identifiable.
 - The image must INSTANTLY communicate the destination and motivate a young Colombian to move there.
+- Skin must show natural uneven tone, visible pores, and subtle blemishes or asymmetry — never waxy, glossy, or synthetic-looking.
+- Hair must look naturally styled with visible individual strands and natural flyaways — never sculpted, helmet-like, or plastic-looking. Avoid strong directional rim-lighting on hair that creates an artificial glowing halo.
+- The overall image must read as a straight, unprocessed photograph — natural color grading, no artificial contrast boost, no "comic book" or over-sharpened look.
+- ZERO TOLERANCE for readable signage: the frame must contain NO sign, plaque, placard, interpretive panel, information board, poster, or any other object bearing printed words or letters — this applies even in settings (sanctuaries, zoos, campuses, markets) where such objects would realistically exist. Every image model renders on-screen text as garbled gibberish, so describe the setting using only natural elements (trees, paths, structures, people) and never mention or imply a sign, panel, board, or display of any kind.
 
 DESTINATION ANCHORING — always use an iconic, unmistakable landmark:
   Australia: The exact city and landmark are provided in the user message as CITY LOCK. Follow it precisely — use that city, use that landmark, and do not substitute any other Australian city or landmark. Australia posts cover the full country: cities (Melbourne, Brisbane, Perth, Adelaide, Gold Coast, Cairns, Sydney, Hobart, Darwin), wildlife (koalas, quokkas, kangaroos), and natural wonders (Great Barrier Reef, Daintree Rainforest, Blue Mountains). The CITY LOCK exclusion rule (if any) must also be respected.
@@ -338,6 +351,7 @@ export async function generateContent(record, ctx) {
         `The CHARACTER LOCK student appears in the mid-ground, observing or standing near the animal — engaged but clearly secondary to the wildlife.`,
         `The animal must be sharp, detailed, and unmistakably the hero of the frame. The student provides human scale and relatability, not dominance.`,
         `The animal must look like a real, living, breathing creature photographed candidly in its natural habitat — National-Geographic-style wildlife photography, natural fur/feather texture with individually visible hairs. Never a toy, plastic figure, statue, taxidermy mount, or cartoon.`,
+        `The animal's expression must be natural and mildly indifferent or curious, like a real wild animal caught on camera — NOT human-like emotional intensity, NOT anthropomorphized, NOT wide "cartoon-cute" eyes.`,
       ].join('\n') : '',
     ].filter(Boolean).join('\n') : '',
   ].filter(Boolean).join('\n');
