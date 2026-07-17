@@ -1,16 +1,20 @@
 // Australia location library for CITY LOCK injection.
-// Location is picked deterministically from the record's publish week + day
-// slot, so:
+// Location is picked deterministically from a continuous post counter (week
+// index * 4 + day slot), permuted by a stride coprime with the list length, so:
 //   - the same record always maps to the same city/landmark (idempotent retries)
-//   - the 4 posts of any one week always land in 4 different cities (slots are
-//     5 indexes apart — wider than the largest same-city group in the list)
-//   - the week hash rotates the whole set week over week
+//   - the 4 posts of any one week always land in 4 different cities (consecutive
+//     counters map to residues 5 apart, which never collide within a week)
+//   - every run of 22 consecutive posts (~5.5 weeks) visits all 22 locations
+//     exactly once before any location repeats — this replaces an earlier
+//     per-week hash that only guaranteed distinctness *within* a week and let
+//     the same city recur across adjacent weeks (e.g. Brisbane's Story Bridge
+//     appearing in two posts days apart)
 // No in-memory state — deploy restarts have zero effect on variety.
 //
 // Locations with type:'wildlife' trigger a WILDLIFE SCENE DIRECTIVE in
 // generate-content.js that makes the animal the primary visual subject.
 
-import { hashStr } from './variety.js';
+import { hashStr, weekIndex } from './variety.js';
 
 export const AUSTRALIA_LOCATIONS = [
   // Melbourne — 4 entries
@@ -45,17 +49,21 @@ export const AUSTRALIA_LOCATIONS = [
   { city: 'Kangaroo Island', landmark: 'Wild kangaroos grazing on coastal heathland at dawn, Flinders Chase National Park cliffs and Southern Ocean in the background', exclude: '', type: 'wildlife' },
 ];
 
-// Gap between same-week slots. Must exceed the widest same-city run in
-// AUSTRALIA_LOCATIONS (Melbourne, 4 entries) so weekly picks never share a city.
-const SLOT_STRIDE = 5;
+// Stride used to permute the continuous post counter across the location
+// list. Must be coprime with AUSTRALIA_LOCATIONS.length (22 = 2 × 11) so the
+// mapping is a full bijection — every residue 0..21 is hit exactly once per
+// 22 consecutive posts, guaranteeing zero repeats within any 22-post window.
+const PERMUTE_STRIDE = 5;
 
 // Posting days → slot index. Other weekdays fall back to getDay() % 4.
 const DAY_SLOTS = { 1: 0, 3: 1, 5: 2, 6: 3 }; // Mon, Wed, Fri, Sat
 
 /**
  * Returns the location for a record, deterministically.
- * Uses the publish date's week + day slot when available (guarantees 4 distinct
- * cities per week); falls back to a record-ID hash for records with no date.
+ * Uses a continuous post counter (calendar week index * 4 + day slot) permuted
+ * across the full location list, so distinctness holds both within a week and
+ * across adjacent weeks (a full cycle covers ~5.5 weeks before any repeat).
+ * Falls back to a record-ID hash for records with no parseable publish date.
  *
  * @param {object|string} record  Airtable record fields (with .id and
  *                                'Fecha publicación'), or a bare record ID
@@ -66,12 +74,10 @@ export function pickAustraliaLocation(record = {}) {
 
   const fecha = typeof record === 'object' ? record['Fecha publicación'] : null;
   if (fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-    const [y, m, d]  = fecha.split('-').map(Number);
-    const date       = new Date(y, m - 1, d);
-    const monday     = new Date(y, m - 1, d - ((date.getDay() + 6) % 7));
-    const weekKey    = `${monday.getFullYear()}-${monday.getMonth() + 1}-${monday.getDate()}`;
+    const date       = new Date(...fecha.split('-').map((v, i) => i === 1 ? Number(v) - 1 : Number(v)));
     const slot       = DAY_SLOTS[date.getDay()] ?? date.getDay() % 4;
-    return AUSTRALIA_LOCATIONS[(hashStr(`loc:${weekKey}`) + slot * SLOT_STRIDE) % n];
+    const postCount  = weekIndex(fecha) * 4 + slot;
+    return AUSTRALIA_LOCATIONS[(postCount * PERMUTE_STRIDE) % n];
   }
 
   const id = typeof record === 'string' ? record : record.id ?? '';

@@ -18,7 +18,13 @@ IDIOMA Y VOZ
 CAPTION INSTAGRAM
 Estructura: hook (1 frase) → dato o beneficio sorprendente → "👉 Desliza para ver más" → CTA con «KEYWORD» → 10-15 hashtags
 Longitud: 120-180 palabras. Emojis con moderación (2-4 máx).
-IMPORTANTE — el hook del caption (línea 1) no debe abrir con las dudas o miedos del lector ("¿tienes preguntas sobre la visa?", "empiezan las dudas"). Ese patrón se ha vuelto repetitivo entre publicaciones y vende la resolución de problemas de GlobeHop en vez del atractivo real de Australia. Abre con algo genuinamente inspirador sobre el destino o la transformación — las plantillas con arco miedo→realidad (T03, T04, T18) pueden mantener esa estructura dentro de los slides, pero el caption debe sentirse aspiracional desde la primera línea.
+IMPORTANTE — el hook del caption (línea 1) no debe abrir con las dudas o miedos del lector ("¿tienes preguntas sobre la visa?", "empiezan las dudas"). Ese patrón se ha vuelto repetitivo entre publicaciones y vende la resolución de problemas de GlobeHop en vez del atractivo real de Australia.
+- Para templates centrados en el destino (T01, T09, T17): abre con algo genuinamente inspirador sobre el lugar o la transformación.
+- Para templates prácticos/educativos (T04, T05, T06, T08, T12, T13, T14, T15, T16, T19, T20, T21): abre con el dato, error o angulo concreto del template, no con una frase de "tu vida va a cambiar". Forzar la apertura aspiracional en estos templates es lo que ha hecho que la cuenta se sienta como una sola página de inspiración en vez de una agencia con contenido educativo real.
+- T02, T03, T07, T10, T11, T18 pueden mantener el arco miedo/reto→realidad dentro de los slides; el caption debe sentirse genuino al tema de ese template, no forzosamente aspiracional.
+NO USES afirmaciones de multitud sin verificar: nunca escribas "miles de colombianos", "muchos estudiantes ya lo hicieron", "cada vez más familias colombianas eligen Australia" ni similares. Habla al lector como individuo, o usa un dato concreto en vez de una multitud vaga.
+GlobeHop es para estudiantes de toda Latinoamérica (con fuerte presencia en Colombia), no solo para colombianos — usa "estudiantes latinoamericanos" o dirígete directo al lector; menciona Colombia solo cuando el tema específicamente lo requiera.
+Cada carrusel debe apuntar claramente a uno de tres objetivos: "quiero estudiar en Australia" (destino), "GlobeHop sabe ayudarme" (proceso/experiencia), o "confío en GlobeHop" (evidencia/resultados reales) — que el pillar del post determine cuál.
 
 SELECCIÓN DE TEMPLATE (elige el más adecuado según el pillar + audiencia + destino)
 T01 Destination Discovery   → S2:oportunidad S3:beneficio S4:beneficio S5:transformación       [destination_spotlight]
@@ -27,12 +33,12 @@ T03 Parent Content          → S2:miedo S3:realidad S4:seguridad S5:éxito     
 T04 Visa Mistakes           → S2:error#1 S3:error#2 S4:error#3 S5:solución                    [visa_tip]
 T05 Visa Requirements       → S2:requisito1 S3:requisito2 S4:requisito3 S5:pro tip            [visa_tip]
 T06 Budget Planning         → S2:factores que afectan el costo S3:alojamiento (tipos, sin cifras) S4:cómo planificar S5:agenda con GlobeHop [agency_promo/destination_spotlight]
-T07 Myth vs Reality         → S2:mito S3:realidad S4:mito S5:realidad                        [any]
+T07 Myth vs Reality         → S2:mito S3:realidad S4:mito S5:realidad                        [myth_vs_reality, any]
 T08 Work While Studying     → S2:derechos S3:trabajos típicos S4:beneficios S5:ejemplo real  [destination_spotlight]
 T09 Compare Destinations    → S2:destino A S3:destino B S4:destino C S5:mejor fit            [destination_spotlight]
 T10 Study Pathway           → S2:elige destino S3:elige curso S4:aplica S5:visa              [agency_promo]
 T11 Career Transformation   → S2:oportunidad S3:estudio S4:habilidades S5:futuro             [profesionales]
-T12 Student Life            → S2:campus S3:amigos S4:viajes S5:crecimiento                   [estudiantes]
+T12 Student Life            → S2:primer trámite (banco/SIM/TFN) S3:presupuesto real S4:primer empleo S5:rutina que funciona [student_life]
 T13 English Improvement     → S2:nivel actual S3:inmersión S4:práctica diaria S5:resultados  [visa_tip/destination]
 T14 FAQ Carousel            → S2:FAQ#1 S3:FAQ#2 S4:FAQ#3 S5:FAQ#4                            [any]
 T15 Timeline 90 Days        → S2:mes1 S3:mes2 S4:mes3 S5:salida                              [agency_promo]
@@ -41,6 +47,7 @@ T17 Destination Checklist   → S2:check1 S3:check2 S4:check3 S5:bonus tip      
 T18 Student Testimonial     → S2:problema S3:experiencia S4:resultado S5:recomendación       [student_story]
 T19 GlobeHop Difference     → S2:soporte personalizado S3:visas S4:cuidado S5:resultados     [agency_promo]
 T20 Lead Generation         → S2:oportunidad S3:beneficio1 S4:beneficio2 S5:urgencia         [agency_promo]
+T21 City Deep Dive          → S2:costo de vida real S3:mejores zonas y vida diaria S4:algo único de esta ciudad S5:por qué esta ciudad te conviene [city_spotlight]
 
 LAYOUTS DISPONIBLES PARA SLIDES 2-5
 Elige el que mejor exprese cada slide. No repitas el mismo layout en slides consecutivos.
@@ -63,6 +70,7 @@ REGLAS DE CONTENIDO
 - Textos en español. Sin él/ella — usa "tú" o formas neutras.
 - Headlines sin puntuación extraña al final — se ven mejor en negrita sin punto ni coma
 - COSTOS, TARIFAS Y MONTOS — REGLA ABSOLUTA: nunca incluyas cifras de dinero, montos aproximados ni símbolos de moneda ($, AUD, A$, USD, COP, MXN, CLP) en ningún slide, caption ni hook. Sin excepciones y sin framing de "aprox." — los montos aproximados también están prohibidos. Si el contenido toca costos o presupuesto, usa solo categorías generales (matrícula, alojamiento, transporte) sin cifras, y dirige siempre al estudiante a agendar una asesoría gratuita con GlobeHop para información actualizada y personalizada.
+- ASESORÍA SIEMPRE GRATIS: la asesoría de GlobeHop es gratuita siempre, no solo la primera vez. Nunca escribas "primera asesoría gratis", "asesoría inicial sin costo" ni nada que sugiera que una consulta posterior tiene costo.
 - VISA, REQUISITOS Y DERECHOS LABORALES — REDIRECT OBLIGATORIO: cualquier slide que mencione requisitos de visa, condiciones de elegibilidad, plazos de tramitación o derechos laborales debe incluir obligatoriamente una frase final que redirija al estudiante a consultar con GlobeHop para información actualizada y precisa. Esto es obligatorio, no opcional. Los requisitos cambian con frecuencia; nunca los presentes como un hecho inamovible. Ejemplo de cierre: "Los requisitos cambian con frecuencia, agenda con GlobeHop para saber exactamente qué aplica en tu caso."
 - SIN GUIONES LARGOS: nunca uses raya (—), guión medio (–) ni un guión rodeado de espacios ( - ) como puntuación en ningún texto (caption, headline, body, items, etc.). El español no usa guiones así. Usa una coma, un punto, o divide en dos oraciones.
 - HOOKS (slide 1): abre con paradoja, contraste o lo que nadie dice. No empieces con el nombre del destino. Buenos ejemplos: "Lo que aprendes en Dubái va más allá del inglés", "El destino más subestimado para aprender inglés", "Muchos piensan en estudiar inglés. Pocos consideran esto".
@@ -102,7 +110,7 @@ RESPONDE SOLO CON JSON VÁLIDO, sin texto antes ni después:
 export async function generateCarousel(record, ctx) {
   const destino  = record['Destino/Tema'] ?? '';
   const pillar   = record['Pilar']        ?? record['Pillar'] ?? '';
-  const audience = record['Audiencia']    ?? 'jóvenes colombianos 18-30';
+  const audience = record['Audiencia']    ?? 'jóvenes latinoamericanos 18-30';
   const cta      = record['CTA']          ?? 'Escríbenos por DM';
 
   const isAustralia = /australia/i.test(destino);

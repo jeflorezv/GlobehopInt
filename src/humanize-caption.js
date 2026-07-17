@@ -23,12 +23,15 @@ STRIP these patterns:
 - Adverbs ending in -mente — replace with direct phrasing
 - Hedging: "puede que", "en cierta manera", "de alguna forma"
 - Generic positivity: "el futuro te espera", "tu vida cambia para siempre", "todo es posible"
+- Unverifiable crowd-size claims: "miles de colombianos", "cientos de estudiantes", "muchos ya lo hicieron", "cada vez más familias colombianas eligen Australia" — replace with a specific concrete detail or direct address to the reader instead.
+- "Primera asesoría gratis" / "asesoría inicial sin costo" — GlobeHop's asesoría is always free, not just the first one. Use "asesoría gratuita" with no qualifier implying a later one costs money.
+- Colombia-exclusive framing when the audience is broader — GlobeHop serves students across Latin America. Default to "estudiantes latinoamericanos" unless the topic is genuinely Colombia-specific.
 
 INJECT:
 - Vary rhythm — short punch followed by a longer line, or vice versa
 - Speak to one specific person, not to "la gente" or "los estudiantes"
 - One concrete detail that makes it feel real (a number, a city, a specific moment)
-- GlobeHop must appear naturally in the body at least once — not just in the CTA. If it's missing or feels forced in the draft, rewrite the line to make it land warmly. Good examples: "En GlobeHop hemos acompañado a cientos de estudiantes que dudaban igual que tú.", "Nuestro equipo en GlobeHop te ayuda a entender exactamente qué necesitas."
+- GlobeHop must appear naturally in the body at least once — not just in the CTA. If it's missing or feels forced in the draft, rewrite the line to make it land warmly. Good examples: "En GlobeHop entendemos exactamente por qué dudas, porque hemos resuelto ese mismo caso antes.", "Nuestro equipo en GlobeHop te ayuda a entender exactamente qué necesitas."
 
 BRAND VOICE — GlobeHop is a boutique agency, not a visa office:
 - Convey care, closeness, and experience — not corporate distance

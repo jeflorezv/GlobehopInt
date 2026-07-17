@@ -11,7 +11,7 @@ import { getSourcesReferenceBlock } from './utils/sources.js';
 // Pillars where a real external reference can add credibility. Excludes
 // visa_tip (never states specifics as fact) and news_update (already grounded
 // via its own NEWS LOCK).
-const SOURCE_GROUNDED_PILLARS = new Set(['destination_spotlight', 'student_story', 'agency_promo']);
+const SOURCE_GROUNDED_PILLARS = new Set(['destination_spotlight', 'student_story', 'agency_promo', 'city_spotlight']);
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -50,7 +50,7 @@ MENTIONING GLOBEHOP IN COPY
 Every caption must include a natural, human reference to GlobeHop at least once in the body — not just in the CTA. This signals a real team behind the post, not a generic account.
 
 Use it to convey care, experience, or proximity:
-- "En GlobeHop hemos acompañado a cientos de estudiantes que..."
+- "En GlobeHop entendemos exactamente por qué dudas, porque hemos resuelto ese mismo caso antes."
 - "Nuestro equipo en GlobeHop te ayuda a entender exactamente qué necesitas."
 - "GlobeHop nació para ayudarte a tomar esa decisión con confianza."
 - "En GlobeHop sabemos que el primer paso siempre es el más difícil."
@@ -92,18 +92,30 @@ Example: "Los requisitos de la Subclass 500 cambian con frecuencia, y en GlobeHo
 
 CONTENT PILLARS
 - destination_spotlight: Showcase a study destination (country or city). Inspiring, factual, with a wow-factor detail that makes the reader want to go.
-- visa_tip: A practical, actionable visa or immigration tip. Useful, clear, reassuring. Demystify the process — but never state specific requirements, timelines, or conditions as fact. Always redirect to GlobeHop consultation for accurate details (see VISA & PROCESS CONTENT above).
+- visa_tip: A practical, actionable visa or immigration tip. Useful, clear, reassuring. Demystify the process with real structure — name the general stages, the categories of documents involved, or the most common mistake at that stage — but never state specific requirements, fees, timelines, or conditions as fact. Structure and sequence can be concrete even when figures and rules can't; that's what makes this pillar read as expert rather than vague. Always redirect to GlobeHop consultation for accurate, current details (see VISA & PROCESS CONTENT above).
 - student_story: Write from a student's perspective or as an inspirational third-person story. Personal, emotional, relatable. Make the reader see themselves in the story.
 - agency_promo: GlobeHop's value proposition, services, or unique differentiator. Confident and helpful. Focus on the student's outcome, not GlobeHop's features.
 - news_update: A current news story that matters to students or parents planning Australia (provided as NEWS LOCK in the user message). Informative but warm — translate the news into "what this means for you". Mention the source naturally in the caption ("según el Departamento de Home Affairs", "como reportó Study Australia"). NEVER copy money figures from the news — describe changes qualitatively ("subió el requisito financiero") and redirect to GlobeHop for exact, current numbers. The visual stays an aspirational Australia scene per the CITY LOCK — the news lives in the caption and hook, not the image. Hook LINE 1 = the news angle for the reader ("Australia cambió las reglas del juego"), LINE 2 = what it means for them, LINE 3 = standard DM CTA.
+- city_spotlight: A deep dive into ONE specific practical aspect of the CITY LOCK city (cost of living, neighborhoods, transport, food scene, safety, job market, campus options) — never a generic "look at this landmark" post. The TOPIC LOCK angle names the specific aspect; ground the caption in that city's real character, not interchangeable "study abroad" language. Inspiring and useful at once — a reader from a different city should learn something they didn't already know about this one.
+  CRITICAL — write about the CITY LOCK city specifically, never another Australian city's stereotype. Topic angles like "café culture" or "arts scene" are commonly associated with Melbourne — if the CITY LOCK names a different city, describe what is genuinely true of THAT city (e.g. Perth's isolation and laneway coffee scene is real but distinct from Melbourne's; Brisbane's riverside cafés differ from both). Never write a sentence describing one city then correct it to name another — check the CITY LOCK city before writing and stay consistent throughout caption, hook, and visual.
+- student_life: A practical, how-to piece of daily-life guidance for a Latin American student already settled (or about to settle) in Australia — banking, phone/SIM, Tax File Number, resume building, job hunting, share housing, budgeting, transport passes, local friendships. Useful and concrete, like advice from someone who has already done it — name the actual steps in order, or the specific mistake people make at each one. Never state specific fees, processing times, or legal requirements as fixed fact — describe the process and redirect to GlobeHop for current specifics if it touches anything regulatory (visa work rights, tax obligations).
+- myth_vs_reality: Take ONE specific myth about studying in Australia (provided in TOPIC LOCK, phrased "Myth: ...") and dismantle it with a confident, energizing reality check. This format opens by stating the myth directly, not with the reader's own doubts — this is a "let's kill this misconception" post, not a "you might be a little unsure" post. Close with the empowering truth and how GlobeHop helps navigate it.
 
 ---
 
 POSITIVE, ASPIRATIONAL FRAMING — MANDATORY
 Do NOT open every caption with the reader's doubts, fears, or unanswered questions ("¿Puedo trabajar mientras estudio?", "tienes preguntas", "empiezan las dudas"). That pattern has become repetitive across posts and sells GlobeHop's problem-solving instead of Australia's appeal — it reads as negative and doesn't attract new customers.
-- destination_spotlight, student_story, and agency_promo must lead with something genuinely exciting about studying or living in Australia — the lifestyle, the opportunity, the growth, the specific TOPIC LOCK angle — not with the reader's anxiety. GlobeHop's role (answering questions, guiding the process) belongs in the body or CTA, never as the opening hook or the caption's dominant theme.
-- Only visa_tip may open with a practical question, and even then pair it with an encouraging, confident tone rather than anxiety-inducing framing.
-- Vary the opening across posts: a vivid scene, a bold claim, a "what if" invitation, a piece of real inspiration — not a recurring "you probably have doubts" formula.
+- destination_spotlight must lead with something genuinely exciting about studying or living in Australia — the lifestyle, the opportunity, the growth, the specific TOPIC LOCK angle — not with the reader's anxiety. This is the one pillar whose whole job is pure aspiration.
+- student_story, agency_promo, and city_spotlight should NOT be forced into the same "lifestyle/opportunity" opening as destination_spotlight — that rule applied too broadly made every pillar sound like the same inspirational Australia post regardless of topic. Instead: student_story opens with the story's own concrete moment or turning point; agency_promo opens with GlobeHop's specific value or process, not a generic "your future awaits" line; city_spotlight opens with the concrete city fact or angle from TOPIC LOCK (cost, transport, neighborhood), not a lifestyle montage.
+- visa_tip and student_life may open with a practical question or a direct "how to" framing, and even then pair it with an encouraging, confident tone rather than anxiety-inducing framing.
+- myth_vs_reality opens with the myth itself stated plainly (per its pillar rule above) — this is a distinct format, not the "reader's doubts" pattern this rule prohibits.
+- Vary the opening across posts: a vivid scene, a bold claim, a "what if" invitation, a concrete fact, a piece of real inspiration — not a recurring "you probably have doubts" formula, and not a recurring "this will change your life" formula either. Every pillar should read as genuinely distinct from the others.
+
+CONTENT PURPOSE — every post must clearly serve exactly one of three outcomes, and the caption's dominant idea should make that outcome obvious to the reader:
+1. "Quiero estudiar en Australia" — the destination itself is the draw (destination_spotlight, city_spotlight).
+2. "GlobeHop sabe cómo ayudarme" — GlobeHop's expertise or process is the draw (visa_tip, student_life, agency_promo).
+3. "Confío en GlobeHop lo suficiente para escribirles" — evidence and real outcomes are the draw (student_story, myth_vs_reality).
+Do not blur all three into the same generic "Australia + GlobeHop" message on every post — the pillar dictates which single outcome this post is optimizing for.
 
 ---
 
@@ -158,6 +170,9 @@ Hashtags
 
 Rules:
 - NEVER write audience segment labels (adultos, universitarios, profesionales, padres, estudiantes_secundaria) in the caption copy. These are internal targeting labels — they never appear in published text. Address the reader directly with "tú".
+- NO UNVERIFIABLE CROWD-SIZE CLAIMS: never write "miles de colombianos", "muchos estudiantes ya lo hicieron", "cada vez más colombianos/familias colombianas eligen Australia", or any other claim about how many people have done something — these are unverifiable and have become a repetitive crutch across posts. Speak to the reader as an individual instead ("tú puedes", "imagina tu propia historia"), or ground the post in one specific, concrete detail instead of a vague crowd.
+- GlobeHop's asesoría is ALWAYS free, not just the first one. Never write "primera asesoría gratis", "asesoría inicial sin costo", or any phrasing implying only an initial consultation is free — just "asesoría gratuita" or "consulta gratis", with no qualifier suggesting a later one costs money.
+- GlobeHop serves students across Latin America (with a strong base in Colombia), not exclusively Colombians. Do not default every post to "colombianos" — write to "estudiantes latinoamericanos" or address the reader directly, and only mention Colombia specifically when the topic genuinely calls for it (e.g. a Colombia-specific visa detail).
 - CRITICAL — JSON safety: Never use ASCII double-quote characters (") inside any caption, hook, or visual text. The output is JSON; unescaped " inside a string value breaks the parser and causes the post to fail. For quoted dialogue, use guillemets «» or typographic curly quotes " " instead.
 - NO DASHES IN SPANISH TEXT: Never use an em dash (—), en dash (–), or a hyphen surrounded by spaces ( - ) as punctuation in the caption, hook, or scene overlay text — Spanish doesn't use dashes this way. Use a comma, a period, or restructure into two sentences instead.
 - Use emojis purposefully: 1–2 in hook, emoji bullets in polls, 1 flag emoji for the destination
@@ -169,6 +184,9 @@ Rules:
     visa_tip             → "💬 ¿Tienes dudas sobre tu visa? Escríbenos, te ayudamos."
     student_story        → "✨ ¿Listo para escribir tu propia historia? Escríbenos por DM."
     agency_promo         → "📲 Agenda tu asesoría gratuita. Escríbenos hoy."
+    city_spotlight        → "📲 Escríbenos por DM y te ayudamos a elegir tu ciudad."
+    student_life          → "💬 Escríbenos por DM, te contamos cómo se hace."
+    myth_vs_reality        → "📲 Escríbenos por DM y resolvemos tus dudas reales."
 - The CTA must stand on its own line, feel human, and drive a direct action (DM, comment, link in bio).
 - 10–15 hashtags: mix Spanish + English, niche first, broad last
 - Total 150–280 words including hashtags
@@ -180,7 +198,7 @@ Write an Ideogram image prompt in English. Follow the GlobeHop visual style:
 - Documentary photography, photojournalistic style, 35mm lens, natural lighting. Real skin texture with visible pores and natural imperfections. Realistic clothing folds, visible fabric texture. Authentic candid moment — not a posed stock photo. Premium educational campaign quality.
 - NEVER use these words (they trigger AI-looking faces): perfect skin, ultra beautiful, glamorous, fashion photography, beauty portrait, flawless, luxury model, smooth skin, perfect lighting, ultra attractive.
 - Ultra-sharp detail. Individual hair strands clearly rendered. No AI-smoothed skin. No heavy bokeh blur. Subject sharp, background landmark clearly identifiable.
-- The image must INSTANTLY communicate the destination and motivate a young Colombian to move there.
+- The image must INSTANTLY communicate the destination and motivate a young Latin American to move there.
 - AGE — MANDATORY: every human subject (the CHARACTER LOCK person and any other people in a group scene) must look clearly in their 20s — youthful skin, no grey or greying hair, no deep wrinkles, no middle-aged or older appearance. This applies regardless of the specific age stated in the CHARACTER LOCK description. GlobeHop's audience is young people; every post must portray people who look 20-30 years old.
 - Skin must show natural uneven tone, visible pores, and subtle blemishes or asymmetry — never waxy, glossy, or synthetic-looking. This is about texture, not age — youthful skin can still look natural and unfiltered.
 - Hair must look naturally styled with visible individual strands and natural flyaways — never sculpted, helmet-like, or plastic-looking. Avoid strong directional rim-lighting on hair that creates an artificial glowing halo.
@@ -270,7 +288,7 @@ Rules:
 
 OUTPUT
 Respond with valid JSON only — no markdown fences, no explanation, nothing else:
-{"caption":"<Instagram caption in Spanish with hashtags>","visual":"<Ideogram prompt in English>","scenes":[{"role":"scene_hook","visual":"...","text":"Hace un año tenía miedo."},{"role":"scene_study","visual":"...","text":"Hoy estudia en Irlanda 🇮🇪"},{"role":"scene_student_life","visual":"...","text":"Nuevos amigos.\\nNuevas oportunidades."},{"role":"scene_cta","visual":"...","text":"¿Quieres estudiar en Irlanda?\\nEscribe IRLANDA 🇮🇪\\nConsulta gratuita"}],"hook":"<3-line overlay text printed on the photo in Poppins Bold. Use \\n to separate each line. THREE layers:\n\nLINE 1 — Headline hook (largest text, 4–8 words): Single biggest emotional payoff of going abroad. Bold statement or punchy question. Sell the transformation — NOT the destination. The photo already shows where. Up to 8 words.\nLINE 2 — Supporting line (medium text, 6–12 words): One sentence of context that deepens LINE 1. What changed. How their life transformed. A contrasting before/after. Complements the headline without repeating it.\nLINE 3 — CTA (medium text, 3–6 words): Keyword-trigger DM action. No emojis. Always use destination name inside guillemets — drives ManyChat automation: 'Escribe «IRLANDA»' | 'Escribe «AUSTRALIA» al DM' | 'DM «QUIERO IR»' | 'Escribe «MALTA»'\n\nPhilosophy: People don't want Australia. They want what Australia represents — freedom, growth, a better self. Sell the transformation, not the geography.\n\nModel examples — study the 3-line rhythm. Mix transformation, happiness, and lifestyle freely:\n'La mejor versión de ti está aquí.\\nUn vuelo te separa de quien puedes ser.\\nEscribe «AUSTRALIA» al DM'\n'¿Y si dentro de un año fueras diferente?\\nMiles de colombianos ya dieron ese paso.\\nEscribe «INFO» hoy'\n'Hace un año ella también dudaba.\\nHoy vive en Irlanda y no volvería atrás.\\nEscribe «IRLANDA»'\n'Despertarse en Sídney un martes normal.\\nAsí es la vida de los que se animaron.\\nEscribe «AUSTRALIA» al DM'\n'Nuevos amigos. Nuevo idioma. Nueva vida.\\nAustralia lo tiene todo esperándote.\\nEscribe «AUSTRALIA»'\n'El sol de Melbourne en un miércoles cualquiera.\\nParece mentira hasta que lo vives tú.\\nDM «AUSTRALIA»'\n'Estudiar, explorar y crecer al mismo tiempo.\\nEso es exactamente lo que pasa aquí.\\nEscribe «AUSTRALIA» al DM'\n'Un café en Gold Coast. Un amigo de Brasil. Una clase de inglés.\\nAsí empieza todo.\\nEscribe «AUSTRALIA»'\n\nNever use ALL CAPS. Use guillemets «» for keywords, never ASCII quotes. No hashtags. No flag emojis. Never repeat the country name in LINE 1 or LINE 2 — it's in the photo.>"}
+{"caption":"<Instagram caption in Spanish with hashtags>","visual":"<Ideogram prompt in English>","scenes":[{"role":"scene_hook","visual":"...","text":"Hace un año tenía miedo."},{"role":"scene_study","visual":"...","text":"Hoy estudia en Irlanda 🇮🇪"},{"role":"scene_student_life","visual":"...","text":"Nuevos amigos.\\nNuevas oportunidades."},{"role":"scene_cta","visual":"...","text":"¿Quieres estudiar en Irlanda?\\nEscribe IRLANDA 🇮🇪\\nConsulta gratuita"}],"hook":"<3-line overlay text printed on the photo in Poppins Bold. Use \\n to separate each line. THREE layers:\n\nLINE 1 — Headline hook (largest text, 4–8 words): Single biggest emotional payoff of going abroad. Bold statement or punchy question. Sell the transformation — NOT the destination. The photo already shows where. Up to 8 words.\nLINE 2 — Supporting line (medium text, 6–12 words): One sentence of context that deepens LINE 1. What changed. How their life transformed. A contrasting before/after. Complements the headline without repeating it.\nLINE 3 — CTA (medium text, 3–6 words): Keyword-trigger DM action. No emojis. Always use destination name inside guillemets — drives ManyChat automation: 'Escribe «IRLANDA»' | 'Escribe «AUSTRALIA» al DM' | 'DM «QUIERO IR»' | 'Escribe «MALTA»'\n\nPhilosophy: People don't want Australia. They want what Australia represents — freedom, growth, a better self. Sell the transformation, not the geography.\n\nModel examples — study the 3-line rhythm and how specific they are to Australia/international education. These are TONE REFERENCES ONLY: never reuse one verbatim or lightly reworded ('tu mejor versión', 'un escenario más grande', and similar generic self-improvement phrasing have become repetitive across posts — write something that couldn't apply to any other product):\n'Aprender inglés tomando café en Melbourne un martes cualquiera.\\nAsí se ve estudiar afuera en la práctica.\\nEscribe «AUSTRALIA» al DM'\n'Tu título australiano abre puertas que uno local no abre.\\nTodo empieza por elegir bien el programa.\\nEscribe «AUSTRALIA» al DM'\n'Hace un año ella dudaba igual que tú ahora.\\nHoy estudia turismo en Brisbane y trabaja medio tiempo.\\nEscribe «AUSTRALIA»'\n'Estudiar y trabajar legalmente al mismo tiempo, así funciona allá.\\nEl proceso tiene pasos claros si sabes cuáles son.\\nDM «AUSTRALIA»'\n'Un semestre en Perth cambia cómo ves tu propia carrera.\\nNo es magia, es exposición real a otro mercado laboral.\\nEscribe «AUSTRALIA» al DM'\n\nNever use ALL CAPS. Use guillemets «» for keywords, never ASCII quotes. No hashtags. No flag emojis. Never repeat the country name in LINE 1 or LINE 2 — it's in the photo. Never claim a crowd size ('miles de colombianos', 'muchos ya lo hicieron').>"}
 
 The hook appears printed directly on the photo in large Poppins Bold type. It must earn its place.
 `.trim();
@@ -311,7 +329,7 @@ export async function generateContent(record, ctx) {
     `Post type: ${tipo} (${aspect} aspect ratio)`,
     `Content pillar: ${pillar}`,
     `Target audience: ${audience}`,
-    tema ? `Destination / topic: ${tema}` : 'Destination / topic: (choose a compelling example relevant to Colombian students)',
+    tema ? `Destination / topic: ${tema}` : 'Destination / topic: (choose a compelling example relevant to Latin American students)',
     news ? [
       `NEWS LOCK — MANDATORY: this post covers the following current news story. Follow the news_update pillar rules in the system prompt.`,
       `  Headline: ${news.headline}`,
@@ -331,7 +349,7 @@ export async function generateContent(record, ctx) {
     (SOURCE_GROUNDED_PILLARS.has(pillar) && sourcesReference) ? [
       `REFERENCE SOURCES (optional) — real sources you may draw one detail from ONLY if it naturally fits the TOPIC LOCK angle; skip entirely if it doesn't fit:`,
       sourcesReference,
-      `Never mention a URL or publication name, never state an exact figure as fact (qualitative only, e.g. "cada vez más colombianos eligen Australia"), and never quote or represent the student-story/testimonial sources as GlobeHop's own client — they are tone and inspiration only, not a real GlobeHop student.`,
+      `Never mention a URL or publication name, never state an exact figure as fact (qualitative only), and never quote or represent the student-story/testimonial sources as GlobeHop's own client — they are tone and inspiration only, not a real GlobeHop student.`,
     ].join('\n') : '',
     cta ? `CTA — use this text exactly: "${cta}"` : 'CTA: (choose the most fitting from the pillar defaults in the system prompt)',
     tipo === 'reel' ? 'Include the "scenes" array (4 scene prompts: hook, study, student_life, cta — each with "visual" and "text" fields as described in REEL SCENES).' : 'Omit the "scenes" key — not needed for this post type.',

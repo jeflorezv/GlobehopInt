@@ -8,7 +8,7 @@ import { applyBrand }       from './apply-brand.js';
 import { applyBrandToVideo } from './apply-brand-video.js';
 import { humanizeCaption }  from './humanize-caption.js';
 import { renderCarousel }   from './render-carousel.js';
-import { stripDashes }      from './utils/text.js';
+import { stripDashes, fixConsultationClaim } from './utils/text.js';
 import { uploadToCdn, uploadUrlToCdn } from './upload-cdn.js';
 import {
   fetchRecord,
@@ -128,28 +128,30 @@ async function runStep(stepName, tipo, record, ctx) {
 
     case 'humanize': {
       const humanized = await humanizeCaption(record, ctx);
-      // Deterministic safety net — Spanish copy never uses em/en dashes or
-      // spaced hyphens as punctuation. Runs here (after the last step that
-      // sets caption/hook/slides/scenes) so nothing downstream reintroduces one.
+      // Deterministic safety nets — run here (after the last step that sets
+      // caption/hook/slides/scenes) so nothing downstream reintroduces one.
+      // Spanish copy never uses em/en dashes or spaced hyphens as punctuation,
+      // and GlobeHop's consultation is always free (never "primera"/"inicial").
+      const clean = (t) => fixConsultationClaim(stripDashes(t));
       return {
         ...humanized,
-        caption: stripDashes(humanized.caption),
-        hook:    stripDashes(humanized.hook),
+        caption: clean(humanized.caption),
+        hook:    clean(humanized.hook),
         slides:  (humanized.slides ?? []).map(s => ({
           ...s,
-          headline:   stripDashes(s.headline),
-          subtext:    stripDashes(s.subtext),
-          body:       stripDashes(s.body),
-          stat:       stripDashes(s.stat),
-          statLabel:  stripDashes(s.statLabel),
-          tag:        stripDashes(s.tag),
-          keyword:    stripDashes(s.keyword),
-          action:     stripDashes(s.action),
-          offer:      stripDashes(s.offer),
-          savePrompt: stripDashes(s.savePrompt),
-          items:      (s.items ?? []).map(stripDashes),
+          headline:   clean(s.headline),
+          subtext:    clean(s.subtext),
+          body:       clean(s.body),
+          stat:       clean(s.stat),
+          statLabel:  clean(s.statLabel),
+          tag:        clean(s.tag),
+          keyword:    clean(s.keyword),
+          action:     clean(s.action),
+          offer:      clean(s.offer),
+          savePrompt: clean(s.savePrompt),
+          items:      (s.items ?? []).map(clean),
         })),
-        scenes: (humanized.scenes ?? []).map(s => ({ ...s, text: stripDashes(s.text) })),
+        scenes: (humanized.scenes ?? []).map(s => ({ ...s, text: clean(s.text) })),
       };
     }
 

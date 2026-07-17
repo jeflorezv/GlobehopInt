@@ -15,11 +15,10 @@ const IDEOGRAM_URL = 'https://api.ideogram.ai/v1/ideogram-v3/generate';
 const NEGATIVE_PROMPT = BASE_NEGATIVE_PROMPT;
 
 // Loaded once at startup and cached for all render calls.
-const [NEXA_HEAVY, NEXA_LIGHT, POPPINS_BOLD, LOGO_B64, ICON_B64] = await Promise.all([
+const [NEXA_HEAVY, NEXA_LIGHT, POPPINS_BOLD, ICON_B64] = await Promise.all([
   readFile(path.join(FONTS_DIR, 'Nexa-Heavy.ttf')).then(b => b.toString('base64')),
   readFile(path.join(FONTS_DIR, 'Nexa-ExtraLight.ttf')).then(b => b.toString('base64')),
   readFile(path.join(FONTS_DIR, 'Poppins-Bold.ttf')).then(b => b.toString('base64')),
-  readFile(path.join(ASSETS, 'logo-no-bg.png')).then(b => b.toString('base64')),
   readFile(path.join(ASSETS, 'icon-no-bg.png')).then(b => b.toString('base64')),
 ]);
 
@@ -35,14 +34,28 @@ export async function renderCarousel(record, ctx) {
   if (!slides.length) throw new Error('[render-carousel] ctx.slides is empty');
 
   const dest = record['Destino/Tema'] ?? 'Ireland';
+  const promptFor = i => slides[i].imagePrompt ?? defaultPrompt(dest, slides[i].slideNumber);
 
-  // Generate all background images in parallel before opening the browser
-  console.log('[render-carousel] generating background images in parallel...');
-  const bgImages = await Promise.all(
-    slides.map(slide =>
-      generateBackground(slide.imagePrompt ?? defaultPrompt(dest, slide.slideNumber))
-    )
-  );
+  // Slide 1 is landscape-only (no person). Slide 2 is the character's first
+  // appearance — generated normally, then reused as an Ideogram Character
+  // Reference for slides 3+. Each Ideogram call is otherwise independent and
+  // unlinked, so without this the same person can look like a different
+  // person from slide to slide.
+  console.log('[render-carousel] generating background images...');
+  const [slide1, slide2] = await Promise.all([
+    generateBackground(promptFor(0)),
+    slides.length > 1 ? generateBackground(promptFor(1)) : Promise.resolve(null),
+  ]);
+
+  const rest = slides.length > 2
+    ? await Promise.all(
+        slides.slice(2).map(slide =>
+          generateBackground(slide.imagePrompt ?? defaultPrompt(dest, slide.slideNumber), slide2?.buffer)
+        )
+      )
+    : [];
+
+  const bgImages = [slide1, slide2, ...rest].filter(Boolean).map(r => r.base64);
 
   const browser = await launchBrowser();
   try {
@@ -77,19 +90,30 @@ export async function renderCarousel(record, ctx) {
 
 // ─── background image generation ─────────────────────────────────────────────
 
-async function generateBackground(prompt) {
+// Generates one slide background. When referenceBuffer is provided, uses
+// Ideogram's Character Reference feature (multipart upload) so the person
+// in the image matches the reference's face/hair; otherwise a plain JSON
+// request (used for slide 1's landscape and slide 2's first appearance,
+// which has nothing yet to reference).
+async function generateBackground(prompt, referenceBuffer = null) {
   return withRetry(async () => {
-    const resp = await fetch(IDEOGRAM_URL, {
-      method:  'POST',
-      headers: { 'Api-Key': process.env.IDEOGRAM_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt,
-        negative_prompt:     NEGATIVE_PROMPT,
-        aspect_ratio:        '3x4',
-        style_type:          'REALISTIC',
-        magic_prompt_option: 'OFF',
-      }),
-    });
+    const resp = referenceBuffer
+      ? await fetch(IDEOGRAM_URL, {
+          method:  'POST',
+          headers: { 'Api-Key': process.env.IDEOGRAM_API_KEY },
+          body: buildCharacterReferenceForm(prompt, referenceBuffer),
+        })
+      : await fetch(IDEOGRAM_URL, {
+          method:  'POST',
+          headers: { 'Api-Key': process.env.IDEOGRAM_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            negative_prompt:     NEGATIVE_PROMPT,
+            aspect_ratio:        '3x4',
+            style_type:          'REALISTIC',
+            magic_prompt_option: 'OFF',
+          }),
+        });
 
     if (!resp.ok) {
       const t   = await resp.text();
@@ -105,8 +129,19 @@ async function generateBackground(prompt) {
     assertAllowedUrl(imgUrl, 'render-carousel');
     const imgResp = await fetch(imgUrl);
     const buf     = Buffer.from(await imgResp.arrayBuffer());
-    return buf.toString('base64');
+    return { base64: buf.toString('base64'), buffer: buf };
   });
+}
+
+function buildCharacterReferenceForm(prompt, referenceBuffer) {
+  const form = new FormData();
+  form.append('prompt', prompt);
+  form.append('negative_prompt', NEGATIVE_PROMPT);
+  form.append('aspect_ratio', '3x4');
+  form.append('style_type', 'REALISTIC');
+  form.append('magic_prompt_option', 'OFF');
+  form.append('character_reference_images', new Blob([referenceBuffer], { type: 'image/png' }), 'reference.png');
+  return form;
 }
 
 function defaultPrompt(dest, slideNumber) {
@@ -152,11 +187,18 @@ function fonts() {
   `;
 }
 
-function logoPill(size = 199) {
-  return `<img src="data:image/png;base64,${ICON_B64}"
-    style="width:${size}px;height:${size}px;display:block;object-fit:contain;
-    filter:drop-shadow(0 2px 8px rgba(0,0,0,0.85));"
-    alt="GlobeHop">`;
+// Same icon + dark pill treatment as apply-brand.js's buildIconBadge(), so the
+// brand mark matches across single_photo, reel, and carousel (previously the
+// carousel used a drop-shadow-only treatment while photos used the full logo).
+function logoPill(size = 178) {
+  const pad = 10;
+  const boxSize = size + pad * 2;
+  return `<div style="width:${boxSize}px;height:${boxSize}px;border-radius:50%;
+    background:rgba(28,38,49,0.42);display:flex;align-items:center;justify-content:center;">
+    <img src="data:image/png;base64,${ICON_B64}"
+      style="width:${size}px;height:${size}px;display:block;object-fit:contain;"
+      alt="GlobeHop">
+  </div>`;
 }
 
 function chip(n, total) {

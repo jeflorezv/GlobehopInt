@@ -57,10 +57,13 @@ instagram-automation/
 │       ├── characters.js        Colombian character library — 11 profiles, selectCharacter()
 │       ├── fetch-guard.js       SSRF allowlist — assertAllowedUrl() for all external fetches
 │       ├── australia-locations.js  City/landmark rotation for Australia CITY LOCK
+│       ├── pillar-rotation.js   Shared PILLAR_ROTATION + CTA_BY_PILLAR (7 pillars, 8-week cycle)
+│       ├── variety.js           Topic banks (16 angles × 7 pillars) + scene archetypes + hashStr
 │       └── parse-json.js        Robust JSON extraction from Claude responses
 ├── scripts/
 │   ├── setup-airtable.js        One-time: create schema only (no seeding)
-│   ├── reset-airtable.js        Clear all records + seed fresh 4-week calendar
+│   ├── reset-airtable.js        DESTRUCTIVE: clear all records + seed fresh 8-week calendar
+│   ├── seed-next-weeks.js       Non-destructive: append N future weeks onto the existing calendar
 │   ├── focus-australia.js       Migration: marks all reel + non-Australia records as Omitir
 │   ├── migrate-destino-field.js Schema migration helper
 │   ├── test-generate.js         Integration test: full generation pipeline
@@ -111,8 +114,11 @@ Flow:
 # One-time: create Airtable table schema (does not seed records)
 node scripts/setup-airtable.js
 
-# Reset: delete all records + seed fresh 4-week calendar
+# Reset (DESTRUCTIVE): delete all records + seed fresh 8-week calendar
 node scripts/reset-airtable.js
+
+# Append N future weeks onto the existing calendar without deleting anything (default 4 weeks)
+node scripts/seed-next-weeks.js [weeks]
 
 # Focus: mark all reel + non-Australia records as Omitir (run once after reset)
 node scripts/focus-australia.js
@@ -210,7 +216,8 @@ Keeping these values documented so review feedback can be addressed with targete
 | Carousel CTA slide | `render-carousel.js` `ctaHtml` | `0.45` |
 
 ### Logo / Icon
-- GlobeHop icon on reels and video overlays: `width * 0.165` (≈ 178px on 1080px frame) — top-left, 20px from left, 48px from top
+- **Standardized 2026-07-17:** single_photo, reel overlays, and carousel slides all use the same brand mark now — the `icon-no-bg.png` 3D "G" icon, sized `width * 0.165` (≈ 178px on 1080px frame), in a dark rounded pill (`#1C2631` @ 0.42 opacity), top-left at 20px from left / 48px from top. Previously single_photo used the full `logo.png` at `width * 0.28` with no pill background while reels and carousel each had their own slightly different treatment — three different marks across three post types. `apply-brand.js`'s `buildIconBadge()` is the single implementation shared by `createOverlayPng`, `applyBrand`, and `createSimpleTextPng`; `render-carousel.js`'s `logoPill()` mirrors the same ratio/pill styling in CSS since carousel slides render via Puppeteer, not Sharp.
+- The full `logo.png` is still used standalone in `apply-brand.js`'s `createEndCardPng()` (the reel's final full-screen branded card, centered at `width * 0.55`) — that's a distinct full-screen design moment, not the recurring corner watermark, so it's intentionally exempt from the corner-mark standardization above.
 
 ### Sky and Weather Rules
 All image prompts must produce **clear blue sky, bright sunshine, or warm sunrise**. Dark skies, stormy weather, heavy overcast, and night scenes are blocked via `negative_prompt` in both `generate-image.js` and `render-carousel.js`, and the `generate-content.js` system prompt explicitly prohibits them.
@@ -219,8 +226,13 @@ All image prompts must produce **clear blue sky, bright sunshine, or warm sunris
 
 ## Caption Voice & Style Rules
 
-- **Aspirational framing over problem-first framing:** `generate-content.js`'s POSITIVE, ASPIRATIONAL FRAMING rule and `generate-carousel.js`'s equivalent Spanish instruction require `destination_spotlight`, `student_story`, and `agency_promo` posts to lead with Australia's appeal (lifestyle, opportunity, growth) rather than the reader's doubts or fears. Only `visa_tip` may open with a practical question. This exists because captions had converged on a repetitive "tienes preguntas/dudas" opening regardless of pillar.
+- **Aspirational framing, narrowed 2026-07-17:** Only `destination_spotlight` is required to lead with Australia's lifestyle appeal now. The original rule also forced `student_story`, `agency_promo`, and `city_spotlight` into the same "lifestyle/opportunity/growth" opening, which made 4 of 7 pillars read as the same generic inspirational post regardless of topic — exactly the "looks like one inspirational Australia page" complaint from marketing feedback. Each of those three pillars now opens specific to its own content instead (see the POSITIVE, ASPIRATIONAL FRAMING block in `generate-content.js` and the equivalent Spanish instruction in `generate-carousel.js`). `visa_tip` and `student_life` may open with a practical question or "how to" framing. `myth_vs_reality` opens with the myth itself stated plainly — a distinct format exempt from this rule.
+- **Content purpose rule:** every post must serve exactly one of three outcomes — "quiero estudiar en Australia" (destination_spotlight, city_spotlight), "GlobeHop sabe ayudarme" (visa_tip, student_life, agency_promo), or "confío en GlobeHop" (student_story, myth_vs_reality). Added to stop posts blurring all three into one generic message.
+- **No unverifiable crowd-size claims:** never "miles de colombianos", "cientos de estudiantes", "muchos ya lo hicieron", "cada vez más familias colombianas eligen Australia" — flagged directly by marketing as a repetitive, unverifiable pattern. Prompt rules in `generate-content.js`, `generate-carousel.js`, `humanize-caption.js`.
+- **Consultation is always free, not just the first one:** never "primera asesoría gratis" / "asesoría inicial sin costo". Enforced at two levels like the dash rule below — prompt instructions plus a deterministic safety net, `fixConsultationClaim()` in `src/utils/text.js`, applied in `pipeline.js`'s `humanize` step alongside `stripDashes()`.
+- **Audience is Latin America, not just Colombia:** GlobeHop serves students across LatAm with a strong Colombian base. Copy defaults to "estudiantes latinoamericanos" or addresses the reader directly; "colombianos" is used only when a topic is genuinely Colombia-specific. Updated in `generate-content.js`, `generate-carousel.js` (default audience fallback), and `humanize-caption.js`.
 - **No em dashes or spaced hyphens in Spanish text:** Spanish doesn't use dashes as punctuation the way English does. Enforced at two levels — prompt rules in `generate-content.js`, `generate-carousel.js`, and `humanize-caption.js`, plus a deterministic safety net (`stripDashes()` in `src/utils/text.js`) applied in `pipeline.js`'s `humanize` step to caption, hook, every carousel slide field, and every reel scene's text, regardless of model compliance.
+- **Hook model examples rewritten 2026-07-17:** the hardcoded "model examples" in `generate-content.js`'s hook field description were generic transformation lines ("tu mejor versión", "miles de colombianos ya dieron ese paso") that Claude was echoing near-verbatim across posts. Replaced with fewer, more Australia/education-specific examples and an explicit "tone reference only, don't reuse verbatim" instruction.
 
 ---
 
@@ -261,7 +273,7 @@ Both `generate-content.js` (single_photo/reel) and `generate-carousel.js` use `s
 Defined in `src/utils/australia-locations.js`. 22 locations across Melbourne, Brisbane, Perth, Adelaide, Gold Coast, Cairns, Sydney, Hobart, Darwin, and Kangaroo Island.
 
 **Selection logic (`pickAustraliaLocation(record)`):**
-- Deterministic from the record's `Fecha publicación`: week Monday hash + day slot (Mon/Wed/Fri/Sat → 0–3), slots spaced 5 indexes apart — the 4 posts of any week always land in **4 different cities**, and the set rotates week over week
+- Deterministic from the record's `Fecha publicación`: a continuous post counter (`weekIndex(date) * 4 + day slot`, Mon/Wed/Fri/Sat → 0–3) is permuted across the 22-location list by a stride of 5, which is coprime with 22. This guarantees **4 distinct cities per week** (consecutive counters land 5 apart) *and* **zero repeats across any run of 22 consecutive posts** (~5.5 weeks) — a full bijection over the location list. Replaces an earlier per-week-hash version that only guaranteed distinctness within a single week and let the same landmark recur across adjacent weeks (e.g. Brisbane's Story Bridge appearing in two posts days apart, fixed 2026-07-14).
 - Same record always maps to the same location (idempotent retries work correctly); no in-memory state, deploy-restart safe
 - Falls back to a record-ID hash if the record has no publish date
 - Three locations are tagged `type: 'wildlife'` (Lone Pine koala, Rottnest quokka, Kangaroo Island kangaroos)
@@ -275,9 +287,34 @@ Pass the full record (fields + `.id`) — see pipeline.js note above.
 
 Defined in `src/utils/variety.js`. All picks are deterministic (idempotent retries) and salted independently so location, character, topic, and scene never correlate.
 
-- **Topic bank (`pickTopic(record, pillar)`):** 16 specific angles per pillar. Index = pillar hash + Monday-anchored week counter → the same pillar cycles through all 16 angles before repeating (16 weeks). Injected as `TOPIC LOCK` (generate-content) / `ÁNGULO ESPECÍFICO` (generate-carousel).
+### Content pillars (7 + news override)
+
+Expanded 2026-07-14 from 4 pillars to 7, to fix repetitive topics/copy and align with a funnel-stage content mix (education → inspiration → trust → engagement). Rotation and CTA defaults are defined once in `src/utils/pillar-rotation.js` (`PILLAR_ROTATION`, `CTA_BY_PILLAR`) and imported by both `scripts/reset-airtable.js` and `scripts/seed-next-weeks.js` so the two seeding paths never drift apart.
+
+| Pillar | Category | Angle |
+|---|---|---|
+| `visa_tip` | Education | Practical visa/immigration guidance, never states requirements as fixed fact |
+| `student_life` | Education | Daily-life how-to: banking, SIM, TFN, resume, first job, budgeting |
+| `destination_spotlight` | Inspiration | General Australia lifestyle appeal, tied to the CITY LOCK landmark |
+| `city_spotlight` | Inspiration | Deep dive into ONE practical aspect of the CITY LOCK city (cost of living, neighborhoods, transport, job market) — replaces generic landmark photography with real per-city substance |
+| `student_story` | Social proof | Personal/emotional narrative, third-person or first-person |
+| `agency_promo` | Trust | GlobeHop's value proposition and differentiators |
+| `myth_vs_reality` | Engagement | States one myth from the topic bank directly, then dismantles it — exempt from the "never open with reader's doubts" framing rule since stating the myth IS the format |
+| `news_update` | News (biweekly override) | Every 2nd week's Saturday slot, overrides whatever pillar the rotation would have assigned — see below |
+
+8-week rotation cycle (32 slots), rebalanced 2026-07-17 against marketing's requested mix: Education (`visa_tip`+`student_life`) 25%, Australia/cities (`city_spotlight`) ~19%, Student stories (`student_story`) ~19%, Inspirational (`destination_spotlight`) ~16%, Trust (`agency_promo`) 12.5%, Engagement (`myth_vs_reality`) ~9% (news is layered on top via the separate biweekly override, adding ~12.5% more). No pillar repeats within the same week. The requested "10% GlobeHop/team" bucket isn't broken out separately yet — it's folded into `agency_promo` until real team/student media exists (see below); once that content pipeline exists, `agency_promo` should split into a proper team-content pillar.
+
+- **Topic bank (`pickTopic(record, pillar)`):** 16 specific angles per pillar (7 pillars × 16 = 112 angles total). Index = pillar hash + Monday-anchored week counter → the same pillar cycles through all 16 angles before repeating (16 weeks). Injected as `TOPIC LOCK` (generate-content) / `ÁNGULO ESPECÍFICO` (generate-carousel).
+- **Carousel templates (`generate-carousel.js`):** T21 "City Deep Dive" was added specifically for `city_spotlight` (cost of living → neighborhoods/daily life → unique local detail → why this city fits); T12 "Student Life" and T07 "Myth vs Reality" were retagged to match the new `student_life` and `myth_vs_reality` pillars.
 - **Scene archetypes (`pickSceneArchetype(record)`):** 10 visual archetypes rotated per record, injected as `SCENE ARCHETYPE LOCK` for single_photo posts.
 - **Shared hash (`hashStr`):** FNV-1a — replaces the old character-sum hash whose collisions produced posts with identical city + character pairs.
+
+### Deferred marketing feedback (2026-07-17)
+
+Three items from marketing's feedback round are intentionally not yet implemented, pending decisions:
+- **Parent/child decision-maker framing** ("Dejaste ir a tu hija...", the `padres` audience segment, carousel `T03 Parent Content`) — retiring or reworking this needs a decision on replacement framing, not just deletion.
+- **CTA diversification beyond "Escribe «AUSTRALIA» al DM"** — that exact phrasing drives a live ManyChat DM-keyword automation (see the hook field comment in `generate-content.js`). Need to confirm whether ManyChat also triggers off comments before safely rotating in comment/save/share-based CTAs as primary lead-capture mechanisms.
+- **Real people — students, Yamile, team, institution visits, testimonials** — the pipeline has no path today for the marketing team to attach real photos/video instead of Ideogram generation; every image is AI-generated. Needs a new capability (e.g. an Airtable field that skips the `image`/`render` step when real media is supplied) plus an ongoing supply of real content from the team. Blocks the "10% team" pillar slice and the AI/real-media balance marketing asked for.
 
 ### News posts (`news_update` pillar)
 
@@ -287,13 +324,13 @@ Defined in `src/utils/variety.js`. All picks are deterministic (idempotent retri
 - The story is injected into `generate-content.js` as a `NEWS LOCK`; the caption mentions the source naturally, never copies money figures (the `check` step blocks them), and always redirects to GlobeHop for exact details
 - The covered story is written back to `Notas` as `[news] headline — url`; `fetchRecentNewsStories()` feeds these into future runs so stories don't repeat
 - If no relevant story is found, the post falls back to the `visa_tip` topic bank
-- Seeding: `reset-airtable.js` marks every 2nd-week Saturday as `news_update`; the Pilar single-select option was created via `typecast: true` (the Meta API cannot edit select choices)
+- Seeding: `reset-airtable.js` / `seed-next-weeks.js` mark every 2nd-week Saturday as `news_update`; new Pilar single-select options are created via `typecast: true` in the POST body (the Airtable API cannot edit select choices any other way)
 
 ### Curated reference sources (`src/utils/sources.js`)
 
 Team-maintained list at `docs/latam_students_australia_sources.md` (official Australian government stats, university/testimonial pages, news coverage) — parsed once at module load into `getSourcesReferenceBlock()`. Team edits the markdown; no code change or redeploy needed for the content to take effect on the next process restart.
 - `generate-news.js`: injected into the system prompt as "KNOWN RELIABLE SOURCES" — Claude prioritizes/cross-checks these before general web search when researching a `news_update` story
-- `generate-content.js`: injected as an optional "REFERENCE SOURCES" block for `destination_spotlight`, `student_story`, and `agency_promo` pillars only (never `visa_tip`, which already forbids stating specifics as fact; never `news_update`, which has its own dedicated NEWS LOCK) — Claude may ground one detail if it fits the TOPIC LOCK angle, must paraphrase (no URLs, no exact figures), and must never represent the Maria-from-Colombia story or YouTube testimonial video as an actual GlobeHop client
+- `generate-content.js`: injected as an optional "REFERENCE SOURCES" block for `destination_spotlight`, `student_story`, `agency_promo`, and `city_spotlight` pillars only (never `visa_tip` or `student_life`, which already forbid stating specifics as fact; never `news_update`, which has its own dedicated NEWS LOCK) — Claude may ground one detail if it fits the TOPIC LOCK angle, must paraphrase (no URLs, no exact figures), and must never represent the Maria-from-Colombia story or YouTube testimonial video as an actual GlobeHop client
 - Returns `''` if the doc is missing/unparsable — grounding is optional, never blocks generation
 
 ---

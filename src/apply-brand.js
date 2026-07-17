@@ -30,14 +30,9 @@ export async function createOverlayPng(width, height, hookText = null) {
     composites.push(layer);
   }
 
-  const iconBuf = await sharp(ICON_PATH).trim().resize(Math.round(width * 0.165)).png().toBuffer();
-  const { width: iw, height: ih } = await sharp(iconBuf).metadata();
-  const iconPad = 10;
-  const iconBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-    <rect x="${20 - iconPad}" y="${48 - iconPad}" width="${iw + iconPad * 2}" height="${ih + iconPad * 2}" rx="${Math.round((ih + iconPad * 2) / 2)}" fill="${BRAND_DARK}" fill-opacity="0.42"/>
-  </svg>`;
-  composites.push({ input: Buffer.from(iconBgSvg), blend: 'over' });
-  composites.push({ input: iconBuf, blend: 'over', top: 48, left: 20 });
+  for (const layer of await buildIconBadge(width, height)) {
+    composites.push(layer);
+  }
 
   const filename = `overlay-${randomUUID()}.png`;
   const tmpPath  = path.join('/tmp', filename);
@@ -71,8 +66,9 @@ export async function applyBrand(imageUrl, hookText = null, isReel = false) {
     composites.push(layer);
   }
 
-  const logoBuf = await sharp(LOGO_PATH).trim().resize(Math.round(width * 0.28)).png().toBuffer();
-  composites.push({ input: logoBuf, blend: 'over', top: 75, left: 24 });
+  for (const layer of await buildIconBadge(width, height)) {
+    composites.push(layer);
+  }
 
   const compositedBuf = await sharp(buf).composite(composites).png().toBuffer();
 
@@ -107,6 +103,23 @@ function stripEmoji(text) {
     .replace(/️/gu, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+// Shared corner brand mark — same icon, size ratio, and pill treatment across
+// single_photo, reel overlay, and reel mid-scene overlays, so the mark never
+// drifts out of sync between post types (previously single_photo used the
+// full logo at a different size with no pill background).
+async function buildIconBadge(width, height) {
+  const iconBuf = await sharp(ICON_PATH).trim().resize(Math.round(width * 0.165)).png().toBuffer();
+  const { width: iw, height: ih } = await sharp(iconBuf).metadata();
+  const iconPad = 10;
+  const iconBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <rect x="${20 - iconPad}" y="${48 - iconPad}" width="${iw + iconPad * 2}" height="${ih + iconPad * 2}" rx="${Math.round((ih + iconPad * 2) / 2)}" fill="${BRAND_DARK}" fill-opacity="0.42"/>
+  </svg>`;
+  return [
+    { input: Buffer.from(iconBgSvg), blend: 'over' },
+    { input: iconBuf, blend: 'over', top: 48, left: 20 },
+  ];
 }
 
 async function renderTextLine(text, fontSize, maxWidth, opacity = 1.0, wrap = 'word') {
@@ -249,14 +262,9 @@ export async function createSimpleTextPng(width, height, text = null) {
     }
   }
 
-  const iconBuf = await sharp(ICON_PATH).trim().resize(Math.round(width * 0.165)).png().toBuffer();
-  const { width: iw, height: ih } = await sharp(iconBuf).metadata();
-  const iconPad = 10;
-  const iconBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-    <rect x="${20 - iconPad}" y="${48 - iconPad}" width="${iw + iconPad * 2}" height="${ih + iconPad * 2}" rx="${Math.round((ih + iconPad * 2) / 2)}" fill="${BRAND_DARK}" fill-opacity="0.42"/>
-  </svg>`;
-  composites.push({ input: Buffer.from(iconBgSvg), blend: 'over' });
-  composites.push({ input: iconBuf, blend: 'over', top: 48, left: 20 });
+  for (const layer of await buildIconBadge(width, height)) {
+    composites.push(layer);
+  }
 
   const filename = `scene-text-${randomUUID()}.png`;
   const tmpPath  = path.join('/tmp', filename);
