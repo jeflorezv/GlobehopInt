@@ -13,10 +13,12 @@ import {
   markEnCola,
   markApproved,
   markPublished,
-  markOmitir,
+  resetForRegeneration,
   saveEdits,
 } from './save-to-airtable.js';
 import { sendPublishConfirmation, sendErrorAlert } from './send-alert.js';
+import { runBackupWithAlert } from './backup-airtable.js';
+import { formatRegenerationNote, validateRejectionReason } from './utils/regeneration.js';
 
 const REQUIRED_ENV = [
   'ANTHROPIC_API_KEY', 'IDEOGRAM_API_KEY',
@@ -44,6 +46,11 @@ app.use(express.urlencoded({ extended: false }));
 app.set('trust proxy', 1);
 
 const apiLimiter = rateLimit({ windowMs: 60_000, max: 20, standardHeaders: true, legacyHeaders: false });
+
+app.use('/review', (_req, res, next) => {
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
+});
 
 // Tracks in-flight pipeline runs to prevent concurrent writes for the same record
 const inFlight = new Set();
@@ -95,7 +102,10 @@ function requireReviewToken(req, res, next) {
       .send(errorPage('REVIEW_PASSWORD no está configurado en el servidor. Contacta al administrador.'));
   }
   const token = req.query.token ?? req.body?.reviewToken;
-  if (!token || token !== pw) {
+  const key = Buffer.from('gh-review');
+  const provided = createHmac('sha256', key).update(String(token ?? '')).digest();
+  const expected = createHmac('sha256', key).update(pw).digest();
+  if (!token || !timingSafeEqual(provided, expected)) {
     return res.status(401)
       .setHeader('Content-Type', 'text/html; charset=utf-8')
       .send(errorPage('Acceso no autorizado. Verifica el enlace de revisión con tu equipo.'));
@@ -273,10 +283,10 @@ app.get('/retry/:recordId', requireRetryToken, apiLimiter, async (req, res) => {
 //   2. Team opens https://<railway-url>/review?token=<REVIEW_PASSWORD>
 //   3. Team clicks a post → sees full preview (image, hook, caption)
 //   4. Team clicks "Aprobar y Publicar" → publishes to Instagram → Publicado
-//      OR clicks "Rechazar" → Estado: Omitir (removed from queue)
+//      OR submits rejection feedback → full regeneration → Pendiente revisión
 
 // GET /review?token=X — dashboard listing all Pendiente revisión records
-app.get('/review', requireReviewToken, async (req, res) => {
+app.get('/review', apiLimiter, requireReviewToken, async (req, res) => {
   const token = req.query.token;
   try {
     const [pendingRecords, approvedRecords] = await Promise.all([
@@ -292,7 +302,7 @@ app.get('/review', requireReviewToken, async (req, res) => {
 });
 
 // GET /review/:recordId?token=X — full preview of a single record
-app.get('/review/:recordId', requireReviewToken, async (req, res) => {
+app.get('/review/:recordId', apiLimiter, requireReviewToken, async (req, res) => {
   const { recordId } = req.params;
   const token = req.query.token;
   try {
@@ -332,20 +342,37 @@ app.post('/review/:recordId/approve', requireReviewToken, apiLimiter, async (req
   const back  = `/review?token=${encodeURIComponent(token)}`;
 
   try {
-    await markApproved(recordId);
+    if (inFlight.has(recordId)) {
+      throw new Error('Este post se está regenerando. Intenta de nuevo cuando termine.');
+    }
 
-    const record = await fetchRecord(recordId);
-    const fecha  = record['Fecha publicación'] ?? '';
+    inFlight.add(recordId);
+    let record;
+    try {
+      record = await fetchRecord(recordId);
+      if (record['Estado'] !== 'Pendiente revisión') {
+        throw new Error(`Solo se puede aprobar un post pendiente de revisión. Estado actual: ${record['Estado'] ?? 'desconocido'}.`);
+      }
+      await markApproved(recordId);
+    } catch (err) {
+      inFlight.delete(recordId);
+      throw err;
+    }
+
+    const fecha = record['Fecha publicación'] ?? '';
     if (fecha && fecha <= bogotaToday()) {
       console.log(`[review] ${recordId} approved late (due ${fecha}) — publishing now`);
       res.redirect(`${back}&publishing=1`);
-      publishRecord(recordId, record).catch(async err => {
-        console.error(`[review] late publish ${recordId} failed: ${err.message}`);
-        await sendErrorAlert({ recordId, stepName: 'approve-publish', error: err }).catch(() => {});
-      });
+      publishRecord(recordId, record)
+        .catch(async err => {
+          console.error(`[review] late publish ${recordId} failed: ${err.message}`);
+          await sendErrorAlert({ recordId, stepName: 'approve-publish', error: err }).catch(() => {});
+        })
+        .finally(() => inFlight.delete(recordId));
       return;
     }
 
+    inFlight.delete(recordId);
     res.redirect(`${back}&approved=1`);
   } catch (err) {
     console.error('[review] approve failed:', err.message);
@@ -353,18 +380,47 @@ app.post('/review/:recordId/approve', requireReviewToken, apiLimiter, async (req
   }
 });
 
-// POST /review/:recordId/reject — set Estado: Omitir, redirect to dashboard
+// POST /review/:recordId/reject — record feedback and regenerate from scratch
 app.post('/review/:recordId/reject', requireReviewToken, apiLimiter, async (req, res) => {
   const { recordId } = req.params;
   const token = req.body?.reviewToken ?? req.query.token;
   const back  = `/review?token=${encodeURIComponent(token)}`;
 
   try {
-    await markOmitir(recordId);
-    res.redirect(`${back}&rejected=1`);
+    const reason = validateRejectionReason(req.body?.rejectionReason);
+    if (inFlight.has(recordId)) {
+      throw new Error('Este post ya se está generando. Intenta de nuevo cuando termine.');
+    }
+
+    inFlight.add(recordId);
+    try {
+      const record = await fetchRecord(recordId);
+      if (record['Estado'] !== 'Pendiente revisión') {
+        throw new Error(`Solo se puede rechazar un post pendiente de revisión. Estado actual: ${record['Estado'] ?? 'desconocido'}.`);
+      }
+
+      // Deliberately do NOT carry forward an existing "[news] headline — url"
+      // line: that's the citation of the story being rejected, and generate-
+      // news.js's extractUrl() treats any [news]-prefixed Notas line as a
+      // team-pre-selected article to re-verify — preserving it would make the
+      // regenerated post re-research and re-cite the exact same rejected
+      // story. It's also redundant: fetchRecentNewsStories() only considers
+      // records with a non-empty Caption generado, which resetForRegeneration
+      // just cleared, so this record was already excluded from the "covered
+      // stories" list regardless.
+      await resetForRegeneration(recordId, formatRegenerationNote(reason));
+    } catch (err) {
+      inFlight.delete(recordId);
+      throw err;
+    }
+
+    res.redirect(`${back}&regenerating=1`);
+    runPipeline(recordId)
+      .catch(err => console.error(`[review] regeneration ${recordId} failed:`, err.message))
+      .finally(() => inFlight.delete(recordId));
   } catch (err) {
     console.error('[review] reject failed:', err.message);
-    res.redirect(`${back}&error=${encodeURIComponent(err.message)}`);
+    res.redirect(`/review/${esc(recordId)}?token=${encodeURIComponent(token)}&error=${encodeURIComponent(err.message)}`);
   }
 });
 
@@ -423,6 +479,19 @@ app.post('/publish-scheduled', requireSecret, apiLimiter, async (req, res) => {
       console.error(`[publish-scheduled] ${recordId} failed: ${err.message}`);
       await sendErrorAlert({ recordId, stepName: 'publish-scheduled', error: err }).catch(() => {});
     }
+  }
+});
+
+// Read-only snapshot of the entire Airtable table to Cloudinary, so a restore
+// reference exists (Airtable revision history is not enabled on this base).
+// Triggered biweekly by a Make.com scheduled module — see CLAUDE.md.
+app.post('/backup-airtable', requireSecret, apiLimiter, async (req, res) => {
+  try {
+    const { url, recordCount } = await runBackupWithAlert();
+    res.json({ ok: true, recordCount, url });
+  } catch (err) {
+    console.error('[backup-airtable] failed:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -486,6 +555,8 @@ function dashboardHtml(pendingRecords, approvedRecords, token, query = {}) {
     flash = '<div class="flash flash-ok">✓ Post publicado en Instagram exitosamente.</div>';
   } else if (query.publishing) {
     flash = '<div class="flash flash-ok">✓ Post aprobado — la fecha ya pasó, se está publicando en Instagram ahora mismo (revisa en unos minutos).</div>';
+  } else if (query.regenerating) {
+    flash = '<div class="flash flash-warn">Post rechazado. Se está generando una nueva versión con los comentarios del equipo.</div>';
   } else if (query.rejected) {
     flash = '<div class="flash flash-warn">Post rechazado y movido a Omitir.</div>';
   } else if (query.error) {
@@ -654,6 +725,23 @@ function recordDetailHtml(recordId, record, token, req = {}) {
   const errorFlash = req?.query?.error
     ? `<div class="flash-err-inline">Error: ${esc(req.query.error)}</div>` : '';
 
+  const checklistHtml = pending ? `
+<details class="review-checklist">
+  <summary>Checklist de revisión (60 segundos)</summary>
+  <ul>
+    <li>¿Se parece a alguna de las últimas 9 publicaciones?</li>
+    <li>¿Habla directamente al segmento correcto?</li>
+    <li>¿El hook entrega información o solo inspiración?</li>
+    <li>¿La portada se entiende en dos segundos?</li>
+    <li>¿El contenido cumple la promesa del hook?</li>
+    <li>¿El CTA corresponde con el objetivo del post?</li>
+    <li>¿Existe una razón clara para elegir o confiar en GlobeHop?</li>
+    <li>¿La persona y el lugar se ven creíbles?</li>
+    <li>¿Las cifras o afirmaciones tienen fuente vigente?</li>
+    <li>¿El contenido aporta algo distinto a lo ya publicado?</li>
+  </ul>
+</details>` : '';
+
   const editForm = pending ? `
 <div class="edit-section">
   <div class="section-label">Editar copy</div>
@@ -673,9 +761,11 @@ function recordDetailHtml(recordId, record, token, req = {}) {
     <input type="hidden" name="reviewToken" value="${esc(token)}">
     <button type="submit" class="btn btn-approve">✓ Aprobar</button>
   </form>
-  <form method="POST" action="/review/${esc(recordId)}/reject">
+  <form method="POST" action="/review/${esc(recordId)}/reject" class="reject-form">
     <input type="hidden" name="reviewToken" value="${esc(token)}">
-    <button type="submit" class="btn btn-reject" onclick="return confirm('¿Rechazar este post?')">✗ Rechazar</button>
+    <label for="rejection-reason" class="field-label">¿Qué debe cambiar en la nueva versión?</label>
+    <textarea id="rejection-reason" name="rejectionReason" rows="3" minlength="10" maxlength="500" required placeholder="Ejemplo: el hook es muy genérico y la imagen se parece a la publicación anterior."></textarea>
+    <button type="submit" class="btn btn-reject" onclick="return confirm('¿Rechazar y generar una nueva versión?')">✗ Rechazar y regenerar</button>
   </form>
 </div>`
     : `<div class="status-note">Estado actual: ${esc(estado)}</div>`;
@@ -696,6 +786,9 @@ ${BASE_CSS}
 .badge-tipo{background:rgba(68,83,157,.25);color:#8b9cf4;border:1px solid rgba(68,83,157,.4)}
 .badge-dest{background:rgba(103,187,151,.15);color:#67BB97;border:1px solid rgba(103,187,151,.3)}
 .badge-fecha{background:#1c2631;color:#71717a;border:1px solid #2d3b47}
+.review-checklist{margin-bottom:18px;padding:12px 14px;border-radius:10px;background:#161b22;border:1px solid #21262d}
+.review-checklist summary{font-size:13px;font-weight:700;color:#e4e4e7;cursor:pointer}
+.review-checklist ul{margin:10px 0 0;padding-left:18px;font-size:13px;color:#a1a1aa;line-height:1.6}
 .media{border-radius:12px;overflow:hidden;margin-bottom:18px;background:#161b22}
 .media img{display:block;width:100%}
 .media video{display:block;width:100%;max-height:70vh;object-fit:contain;background:#000}
@@ -712,13 +805,16 @@ ${BASE_CSS}
 .hook{background:#1c2631;border-left:3px solid #44539D;border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:16px;font-size:15px;font-weight:600;line-height:1.6;white-space:pre-line}
 .caption-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#52525b;margin-bottom:8px}
 .caption{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:16px;font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word;color:#a1a1aa;max-height:280px;overflow-y:auto;margin-bottom:0}
-.actions{display:flex;gap:10px;margin-top:24px}
+.actions{display:grid;gap:14px;margin-top:24px}
 .btn{flex:1;padding:14px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;border:none;text-align:center;transition:background .15s}
 .btn-approve{background:#22c55e;color:#fff}
 .btn-approve:hover{background:#16a34a}
-.btn-reject{background:#21262d;color:#71717a;border:1px solid #30363d}
+.btn-reject{background:#21262d;color:#a1a1aa;border:1px solid #30363d}
 .btn-reject:hover{background:#30363d;color:#e4e4e7}
-form{flex:1;display:flex}form .btn{width:100%}
+form{display:flex}form .btn{width:100%}
+.reject-form{display:grid;gap:8px;padding:14px;border:1px solid #30363d;border-radius:10px;background:#161b22}
+.reject-form textarea{width:100%;box-sizing:border-box;resize:vertical;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e4e4e7;padding:10px 12px;font:inherit;line-height:1.5}
+.reject-form textarea:focus{outline:2px solid #44539D;outline-offset:1px;border-color:#44539D}
 .status-note{margin-top:20px;padding:12px 16px;background:#1c2631;border-radius:10px;font-size:14px;color:#71717a;text-align:center}
 .edit-section{margin-top:24px;border-top:1px solid #21262d;padding-top:20px}
 .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#52525b;margin-bottom:12px}
@@ -747,6 +843,7 @@ form{flex:1;display:flex}form .btn{width:100%}
   <div class="caption-label">Caption Instagram</div>
   <div class="caption">${esc(caption)}</div>
   ${savedFlash}${errorFlash}
+  ${checklistHtml}
   ${editForm}
   ${actionsHtml}
 </div>

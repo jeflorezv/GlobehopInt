@@ -158,6 +158,12 @@ const TOPIC_BANK = {
 // Visual scene archetypes for single_photo posts — mirrors the archetype list
 // in the generate-content system prompt but forces rotation instead of letting
 // the model gravitate to the same two or three.
+//
+// Entries 0-9 are the original tourist/landmark-pose set; 10-15 were added to
+// give the pool real everyday-student-life coverage (classroom, library,
+// share housing, commute, errands, orientation) — the spec's marketing
+// feedback flagged the account as reading like "one tourist poster after
+// another" because none of these existed before.
 const SCENE_ARCHETYPES = [
   'Group of 2–4 multicultural students laughing together near the landmark — genuine joy, arms around each other',
   'Student with arms open wide facing the ocean, beach, or skyline — freedom, arrival, pure happiness',
@@ -169,6 +175,12 @@ const SCENE_ARCHETYPES = [
   'Single student reading on a park bench or river bank, peaceful and content, golden light',
   'Student on a rooftop or hilltop lookout, city below, wide grin to camera — life is good',
   'Student mid-stride crossing a lively street or plaza, headphones on, at home in the city',
+  'Student actively participating in a university classroom or tutorial — hand raised or laptop open, engaged discussion with diverse classmates, natural indoor light',
+  'Student deep in focused study at a library desk, laptop and notes spread out, quiet concentration, soft window light',
+  'Student cooking or doing dishes in a shared house kitchen with flatmates from different backgrounds, casual chatter, everyday domestic warmth',
+  'Student commuting on a train, tram, or bus with headphones in and a coffee in hand, city passing by the window, relaxed everyday routine',
+  'Student pushing a trolley through a bright supermarket aisle, comparing products, practical everyday errand',
+  'Student at a campus orientation or welcome event, name tag or lanyard, meeting new international classmates, first-day energy',
 ];
 
 const MS_PER_WEEK = 7 * 24 * 3600 * 1000;
@@ -201,14 +213,127 @@ export function pickTopic(record = {}, pillar = '') {
   return pool[hashStr(`topic:${pillar}:${record.id ?? ''}`) % pool.length];
 }
 
+// Stride for permuting the continuous post counter across SCENE_ARCHETYPES —
+// same technique as australia-locations.js's PERMUTE_STRIDE, chosen coprime
+// with the pool length (16) so the mapping is a full bijection. Using a
+// different stride (7 vs. locations' 5) keeps the two dimensions independent
+// rather than correlated.
+const SCENE_STRIDE = 7;
+
+// Posting days → slot index, same mapping as australia-locations.js.
+const DAY_SLOTS_SCENE = { 1: 0, 3: 1, 5: 2, 6: 3 }; // Mon, Wed, Fri, Sat
+
 /**
  * Picks the visual scene archetype for a single_photo record, deterministically.
- * Salted independently from location and character hashes so the three
- * dimensions never correlate.
  *
- * @param {object} record  Airtable record (uses record.id)
+ * The previous implementation (`hashStr('scene:' + id) % 10`) was a pure
+ * random draw per record with no rotation guarantee — with 4 posts/week drawn
+ * from 10 archetypes the birthday paradox gave roughly a 50% chance of
+ * repeating the same pose within a single week. This now uses the same
+ * continuous-post-counter + coprime-stride permutation as
+ * pickAustraliaLocation, so any 16 consecutive counter values (a ~4-week
+ * span) hit every archetype at most once before repeating.
+ *
+ * @param {object} record  Airtable record (uses record.id, 'Fecha publicación')
  * @returns {string} scene archetype description
  */
 export function pickSceneArchetype(record = {}) {
-  return SCENE_ARCHETYPES[hashStr(`scene:${record.id ?? ''}`) % SCENE_ARCHETYPES.length];
+  const n = SCENE_ARCHETYPES.length;
+  const fecha = record['Fecha publicación'] ?? '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    const date = new Date(...fecha.split('-').map((v, i) => i === 1 ? Number(v) - 1 : Number(v)));
+    const slot = DAY_SLOTS_SCENE[date.getDay()] ?? date.getDay() % 4;
+    const postCount = weekIndex(fecha) * 4 + slot;
+    return SCENE_ARCHETYPES[(postCount * SCENE_STRIDE) % n];
+  }
+  return SCENE_ARCHETYPES[hashStr(`scene:${record.id ?? ''}`) % n];
+}
+
+// The 8 approved hook structures (spec section 8.2) — forces mechanical
+// variety in HOW a hook opens, the same way TOPIC LOCK/CITY LOCK/CHARACTER
+// LOCK already force variety in topic/location/character. Without this, hook
+// rhetorical structure was left entirely to the model's free choice on every
+// call, with no memory of what the last N posts used.
+const HOOK_STRUCTURES = [
+  { id: 'situation_decision',  instruction: 'A recognizable situation the reader is in, followed by the decision it forces' },
+  { id: 'error_consequence',   instruction: 'A common mistake students make, followed by its real consequence' },
+  { id: 'comparison_criterion',instruction: 'A comparison between two options, built around an unexpected criterion most people never consider' },
+  { id: 'profile_next_step',   instruction: 'A concrete student profile, followed by the specific next step that fits them' },
+  { id: 'faq_answer',          instruction: 'A real, frequently asked question, followed by a precise, concrete answer' },
+  { id: 'number_benefit',      instruction: 'A specific number of items (steps, mistakes, things to check), followed by the clear benefit they add up to' },
+  { id: 'myth_correction',     instruction: 'A common myth, followed by the grounded correction' },
+  { id: 'process_moment',      instruction: 'A specific moment in the process (applying, visa, arrival), followed by what to check at exactly that point' },
+];
+
+/**
+ * Picks the hook rhetorical structure for a record, deterministically —
+ * same weekIndex-rotation pattern as pickTopic, cycling through all 8
+ * structures before any repeat.
+ *
+ * @param {object} record  Airtable record (uses record.id, 'Fecha publicación')
+ * @returns {{ id: string, instruction: string }}
+ */
+export function pickHookStructure(record = {}) {
+  const fecha = record['Fecha publicación'] ?? '';
+  const idx = /^\d{4}-\d{2}-\d{2}$/.test(fecha)
+    ? (hashStr('hookStructure') + weekIndex(fecha)) % HOOK_STRUCTURES.length
+    : hashStr(`hookStructure:${record.id ?? ''}`) % HOOK_STRUCTURES.length;
+  return HOOK_STRUCTURES[idx];
+}
+
+// The 4 caption formats already described in generate-content.js's system
+// prompt (FORMAT A-D) — previously left to the model's free choice on every
+// call ("use one of these proven formats, chosen based on pillar and
+// audience") with no rotation or history check.
+const CAPTION_FORMATS = ['A', 'B', 'C', 'D'];
+
+/**
+ * Picks which caption format (A-D, described in generate-content.js's system
+ * prompt) to force for a record, deterministically.
+ *
+ * @param {object} record  Airtable record (uses record.id, 'Fecha publicación')
+ * @returns {string} 'A' | 'B' | 'C' | 'D'
+ */
+export function pickCaptionFormat(record = {}) {
+  const fecha = record['Fecha publicación'] ?? '';
+  const idx = /^\d{4}-\d{2}-\d{2}$/.test(fecha)
+    ? (hashStr('captionFormat') + weekIndex(fecha)) % CAPTION_FORMATS.length
+    : hashStr(`captionFormat:${record.id ?? ''}`) % CAPTION_FORMATS.length;
+  return CAPTION_FORMATS[idx];
+}
+
+// Carousel template pools per pillar — narrows generate-carousel.js's fully
+// open "choose the most fitting template" instruction down to the templates
+// actually tagged for that pillar in its system prompt's template table
+// (T01-T21), plus T14 (FAQ, tagged [any]) added to every pool for extra
+// variety. Pillars not listed here (e.g. news_update, which the seeding
+// scripts never assign to a carousel slot) fall back to the model's free
+// choice — pickTemplate returns null and no TEMPLATE LOCK is injected.
+const CAROUSEL_TEMPLATES_BY_PILLAR = {
+  destination_spotlight: [1, 8, 9, 17, 14],
+  city_spotlight:        [21, 14],
+  student_story:         [2, 18, 14],
+  visa_tip:               [4, 5, 13, 14],
+  student_life:            [12, 14],
+  myth_vs_reality:         [7, 14],
+  agency_promo:            [6, 10, 15, 19, 20, 14],
+};
+
+/**
+ * Picks the carousel template number for a record, deterministically.
+ * Returns null when the pillar has no defined pool (leaves template choice
+ * to the model, same as today).
+ *
+ * @param {object} record  Airtable record (uses record.id, 'Fecha publicación')
+ * @param {string} pillar  Content pillar
+ * @returns {number|null} template number (1-21) or null
+ */
+export function pickTemplate(record = {}, pillar = '') {
+  const pool = CAROUSEL_TEMPLATES_BY_PILLAR[pillar];
+  if (!pool || !pool.length) return null;
+  const fecha = record['Fecha publicación'] ?? '';
+  const idx = /^\d{4}-\d{2}-\d{2}$/.test(fecha)
+    ? (hashStr(`template:${pillar}`) + weekIndex(fecha)) % pool.length
+    : hashStr(`template:${pillar}:${record.id ?? ''}`) % pool.length;
+  return pool[idx];
 }

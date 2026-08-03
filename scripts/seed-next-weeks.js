@@ -9,7 +9,7 @@
  * Usage: node scripts/seed-next-weeks.js [weeks]   (default 4 weeks)
  */
 import 'dotenv/config';
-import { PILLAR_ROTATION, CTA_BY_PILLAR } from '../src/utils/pillar-rotation.js';
+import { PILLAR_ROTATION, AUDIENCE_ROTATION, pickCTA } from '../src/utils/pillar-rotation.js';
 
 const API_KEY    = process.env.AIRTABLE_API_KEY;
 const BASE_ID    = process.env.AIRTABLE_BASE_ID;
@@ -22,10 +22,6 @@ const DAYS = [
   { offset: 2, nombre: 'Miércoles', tipo: 'carousel'     },
   { offset: 4, nombre: 'Viernes',   tipo: 'reel'         },
   { offset: 5, nombre: 'Sábado',    tipo: 'single_photo' },
-];
-
-const AUDIENCES = [
-  'estudiantes_secundaria', 'universitarios', 'padres', 'profesionales', 'adultos',
 ];
 
 const COUNTRIES = ['Australia'];
@@ -77,16 +73,17 @@ async function seedWeeks(weekCount) {
       const isNewsSlot = dayIdx === 3 && week % 2 === 1;
       const pilar = isNewsSlot ? 'news_update' : rotationRow[dayIdx];
       const pais  = COUNTRIES[countryIdx % COUNTRIES.length];
+      const fechaStr = localDateStr(date);
 
       records.push({
         fields: {
-          'Fecha publicación': localDateStr(date),
+          'Fecha publicación': fechaStr,
           Día:                 nombre,
           'Tipo de post':      tipo,
           Pilar:               pilar,
-          Audiencia:           AUDIENCES[audienceIdx % AUDIENCES.length],
+          Audiencia:           AUDIENCE_ROTATION[audienceIdx % AUDIENCE_ROTATION.length],
           'Destino/Tema':      pais,
-          CTA:                 CTA_BY_PILLAR[pilar],
+          CTA:                 pickCTA({ 'Fecha publicación': fechaStr }, pilar),
           Estado:              'En cola',
         },
       });

@@ -89,7 +89,8 @@ instagram-automation/
 | **GET** | **`/review`** | **`?token=REVIEW_PASSWORD`** | **Marketing team dashboard** |
 | **GET** | **`/review/:recordId`** | **`?token=REVIEW_PASSWORD`** | **Full post preview** |
 | **POST** | **`/review/:recordId/approve`** | **form body `reviewToken`** | **Mark Aprobado (publishes immediately if the date already passed)** |
-| **POST** | **`/review/:recordId/reject`** | **form body `reviewToken`** | **Mark Omitir** |
+| **POST** | **`/review/:recordId/reject`** | **form body `reviewToken`** | **Capture rejection reason and regenerate from scratch** |
+| POST | `/backup-airtable` | `X-Webhook-Secret` | Read-only snapshot of the full Airtable table, uploaded to Cloudinary |
 
 **Airtable date filter pitfall:** never compare `{Fecha publicación}` directly against a `'YYYY-MM-DD'` string — the comparison fails on the equality day (the field renders as a full datetime). Always wrap: `DATETIME_FORMAT({Fecha publicación}, 'YYYY-MM-DD') <= '...'`.
 | GET | `/images/:filename` | none (rate-limited) | Serve branded images from /tmp |
@@ -104,7 +105,17 @@ Flow:
 3. Team opens the dashboard URL (bookmark it)
 4. Click a post card → full preview (image/carousel/caption/hook)
 5. **Aprobar** → Estado: `Aprobado` → `/publish-scheduled` posts it at 8am Bogotá on its date. If the date already passed, the approve handler publishes immediately in the background.
-6. **Rechazar** → Estado: `Omitir` (removed from queue)
+6. **Rechazar y regenerar** → requires a reason, clears the generated media/copy, returns the record to `En cola`, and immediately generates a new version using that feedback. The regenerated post returns to `Pendiente revisión`.
+
+### Airtable Backups
+
+**Added 2026-08-01** after an incident where two Airtable-mutating scripts (`reset-airtable.js`, `seed-next-weeks.js`) were run unintentionally with no backup or Airtable revision history to recover from. Airtable revision history is a paid-tier feature and is not enabled on this base — this backup system is the only restore point.
+
+- `src/backup-airtable.js` — `backupAirtable()` paginates through every record via `fetchAllRecords()` (`save-to-airtable.js`), and uploads a timestamped JSON snapshot (`{ exportedAt, table, recordCount, records }`) to Cloudinary as a `raw` resource via `uploadRawToCdn()` (`upload-cdn.js`). Entirely read-only against Airtable. `runBackupWithAlert()` wraps this with a SendGrid confirmation/failure email (`sendBackupConfirmation` / `sendBackupFailureAlert` in `send-alert.js`).
+- **`POST /backup-airtable`** — secret-protected endpoint, triggered by a **biweekly Make.com scheduled module** (same pattern as the existing `/generate-next` weekly trigger — add a Make.com scenario with a schedule module set to every 14 days, calling this endpoint with the `X-Webhook-Secret` header). Returns `{ ok, recordCount, url }`.
+- `scripts/backup-airtable.js` — thin CLI wrapper (`node scripts/backup-airtable.js`) for on-demand snapshots, e.g. before running `reset-airtable.js` or any other destructive operation.
+- Cloudinary was chosen over local disk because Railway's filesystem is ephemeral (wiped on redeploy) and Cloudinary is already configured for this project.
+- Backups are not currently pruned — Cloudinary raw storage is cheap at this volume (a few KB per snapshot, every 2 weeks). Revisit if this becomes a real cost.
 
 ---
 
@@ -128,6 +139,9 @@ node scripts/test-generate.js
 
 # Integration test: publish an approved Airtable record to Instagram
 node scripts/test-post.js
+
+# On-demand backup: snapshot the full Airtable table to Cloudinary (read-only, safe anytime)
+node scripts/backup-airtable.js
 
 # Start server (production and local dev)
 node src/webhook.js
@@ -172,7 +186,7 @@ Required on Railway:
 
 ```
 En cola → (pipeline) → Pendiente revisión → (Aprobar) → Aprobado → (publish) → Publicado
-                                          → (Rechazar) → Omitir
+                                          → (Rechazar + motivo) → En cola → (regenerar) → Pendiente revisión
                      → (error) → Error → (retry) → En cola
 ```
 

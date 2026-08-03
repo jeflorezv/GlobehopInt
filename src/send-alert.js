@@ -29,6 +29,33 @@ export async function sendPublishConfirmation({ recordId, tipo, postUrl }) {
   });
 }
 
+/**
+ * Sends a confirmation after a successful Airtable backup.
+ * Called by backup-airtable.js on success.
+ *
+ * @param {{ recordCount: number, url: string }} opts
+ */
+export async function sendBackupConfirmation({ recordCount, url }) {
+  await sendEmail({
+    subject: `🗄️ GlobeHop Instagram — Backup de Airtable completado (${recordCount} registros)`,
+    html: backupHtml({ recordCount, url }),
+  });
+}
+
+/**
+ * Sends an alert when a scheduled Airtable backup fails.
+ * Called by backup-airtable.js on failure.
+ *
+ * @param {{ error: Error|string }} opts
+ */
+export async function sendBackupFailureAlert({ error }) {
+  const message = error instanceof Error ? error.message : String(error);
+  await sendEmail({
+    subject: `⚠️ GlobeHop Instagram — Falló el backup de Airtable`,
+    html: backupFailureHtml({ message }),
+  });
+}
+
 // ─── internal ─────────────────────────────────────────────────────────────────
 
 async function sendEmail({ subject, html }) {
@@ -96,6 +123,31 @@ function successHtml({ recordId, tipo, postUrl }) {
      style="display:inline-block;background:#44539D;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold">
     Ver post en Instagram
   </a>
+  <p style="margin-top:32px;font-size:12px;color:#999">GlobeHop Instagram Automation · Este mensaje es automático</p>
+</body></html>`;
+}
+
+function backupHtml({ recordCount, url }) {
+  return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+  <h2 style="color:#67BB97">🗄️ Backup de Airtable completado</h2>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+    <tr><td style="padding:8px;color:#666;width:140px">Registros</td>
+        <td style="padding:8px;font-weight:bold">${esc(String(recordCount))}</td></tr>
+    <tr><td style="padding:8px;color:#666;vertical-align:top">Archivo</td>
+        <td style="padding:8px"><a href="${esc(url)}">${esc(url)}</a></td></tr>
+  </table>
+  <p style="margin-top:32px;font-size:12px;color:#999">GlobeHop Instagram Automation · Este mensaje es automático</p>
+</body></html>`;
+}
+
+function backupFailureHtml({ message }) {
+  return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+  <h2 style="color:#CF202C">⚠️ Falló el backup de Airtable</h2>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+    <tr><td style="padding:8px;color:#666;vertical-align:top">Error</td>
+        <td style="padding:8px;font-family:monospace;color:#CF202C;word-break:break-all">${esc(message)}</td></tr>
+  </table>
+  <p style="margin-bottom:24px">El backup programado no se completó. Revisa los logs de Railway o ejecuta el backup manualmente.</p>
   <p style="margin-top:32px;font-size:12px;color:#999">GlobeHop Instagram Automation · Este mensaje es automático</p>
 </body></html>`;
 }

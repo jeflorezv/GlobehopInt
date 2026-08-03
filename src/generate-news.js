@@ -33,7 +33,8 @@ OUTPUT — valid JSON only, no markdown fences, no explanation:
 `.trim();
 
 function extractUrl(text = '') {
-  return String(text).match(/https?:\/\/[^\s"'<>)]+/)?.[0] ?? null;
+  const newsLine = String(text).split(/\r?\n/).find(line => line.trim().startsWith('[news]'));
+  return newsLine?.match(/https?:\/\/[^\s"'<>)]+/)?.[0] ?? null;
 }
 
 /**

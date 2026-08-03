@@ -2,14 +2,16 @@ import sharp from 'sharp';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import { assertAllowedUrl } from './utils/fetch-guard.js';
+import { BRAND_COLORS, LOGO_MIN_DIGITAL_PX } from './utils/brand-config.js';
 
 const LOGO_PATH    = path.resolve(process.env.LOGO_PATH ?? './assets/logo.png');
 const ICON_PATH    = path.resolve(process.env.ICON_PATH ?? './assets/icon-no-bg.png');
 const FONT_PATH    = './assets/fonts/Poppins-Bold.ttf';
-const BRAND_HEX    = process.env.BRAND_PRIMARY_COLOR?.trim() || '#44539D';
+const BRAND_HEX    = process.env.BRAND_PRIMARY_COLOR?.trim() || BRAND_COLORS.blue;
 const TINT_OPACITY = Math.max(0, Math.min(1, parseFloat(process.env.BRAND_TINT_OPACITY?.trim() || '0.12') || 0.12));
-const BRAND_DARK   = '#1C2631';
-const BRAND_MINT   = '#44539D';
+const BRAND_DARK   = BRAND_COLORS.darkBlue;
+// Was mistakenly set to the Blue hex (#44539D) — see brand-config.js header.
+const BRAND_MINT   = BRAND_COLORS.mint;
 
 const FONT_ABS = path.resolve(FONT_PATH);
 
@@ -110,7 +112,10 @@ function stripEmoji(text) {
 // drifts out of sync between post types (previously single_photo used the
 // full logo at a different size with no pill background).
 async function buildIconBadge(width, height) {
-  const iconBuf = await sharp(ICON_PATH).trim().resize(Math.round(width * 0.165)).png().toBuffer();
+  // Floor at the brand kit's minimum digital reproduction size (200px) —
+  // width * 0.165 alone rendered ~178px on a 1080px frame, below the floor.
+  const iconWidth = Math.max(LOGO_MIN_DIGITAL_PX, Math.round(width * 0.165));
+  const iconBuf = await sharp(ICON_PATH).trim().resize(iconWidth).png().toBuffer();
   const { width: iw, height: ih } = await sharp(iconBuf).metadata();
   const iconPad = 10;
   const iconBgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">

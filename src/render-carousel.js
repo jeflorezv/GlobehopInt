@@ -6,6 +6,7 @@ import { uploadToCdn } from './upload-cdn.js';
 import { withRetry } from './utils/retry.js';
 import { assertAllowedUrl } from './utils/fetch-guard.js';
 import { BASE_NEGATIVE_PROMPT } from './utils/negative-prompt.js';
+import { BRAND_COLORS, LOGO_MIN_DIGITAL_PX } from './utils/brand-config.js';
 
 const __dirname    = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS       = path.resolve(__dirname, '../assets');
@@ -22,11 +23,15 @@ const [NEXA_HEAVY, NEXA_LIGHT, POPPINS_BOLD, ICON_B64] = await Promise.all([
   readFile(path.join(ASSETS, 'icon-no-bg.png')).then(b => b.toString('base64')),
 ]);
 
+// Sourced from utils/brand-config.js (the shared brand kit values) rather
+// than hardcoded here — this file's values already matched the official kit,
+// but were an independent copy that could silently drift out of sync with
+// apply-brand.js's (which had, until now — see brand-config.js header).
 const C = {
-  DARK_BLUE: '#1C2631',
-  BLUE:      '#44539D',
-  MINT:      '#67BB97',
-  WHITE:     '#FFFFFF',
+  DARK_BLUE: BRAND_COLORS.darkBlue,
+  BLUE:      BRAND_COLORS.blue,
+  MINT:      BRAND_COLORS.mint,
+  WHITE:     BRAND_COLORS.white,
 };
 
 export async function renderCarousel(record, ctx) {
@@ -190,7 +195,7 @@ function fonts() {
 // Same icon + dark pill treatment as apply-brand.js's buildIconBadge(), so the
 // brand mark matches across single_photo, reel, and carousel (previously the
 // carousel used a drop-shadow-only treatment while photos used the full logo).
-function logoPill(size = 178) {
+function logoPill(size = LOGO_MIN_DIGITAL_PX) {
   const pad = 10;
   const boxSize = size + pad * 2;
   return `<div style="width:${boxSize}px;height:${boxSize}px;border-radius:50%;

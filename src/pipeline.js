@@ -8,7 +8,7 @@ import { applyBrand }       from './apply-brand.js';
 import { applyBrandToVideo } from './apply-brand-video.js';
 import { humanizeCaption }  from './humanize-caption.js';
 import { renderCarousel }   from './render-carousel.js';
-import { stripDashes, fixConsultationClaim } from './utils/text.js';
+import { stripDashes, fixConsultationClaim, flagRestrictedPhrases } from './utils/text.js';
 import { uploadToCdn, uploadUrlToCdn } from './upload-cdn.js';
 import {
   fetchRecord,
@@ -16,6 +16,7 @@ import {
   markError,
 } from './save-to-airtable.js';
 import { sendErrorAlert } from './send-alert.js';
+import { getRegenerationReason } from './utils/regeneration.js';
 
 const STEPS = {
   single_photo: ['caption', 'check', 'humanize', 'image', 'brand', 'save'],
@@ -39,6 +40,8 @@ export async function runPipeline(recordId) {
     return { skipped: true };
   }
 
+  validateRequiredFields(record);
+
   const destino = record['Destino/Tema'] ?? '';
   if (!/australia/i.test(destino)) {
     console.log(`[pipeline] ${recordId} — skipped (destination="${destino}" is not Australia — only Australia is active)`);
@@ -46,6 +49,7 @@ export async function runPipeline(recordId) {
   }
 
   const tipo  = record['Tipo de post'];
+  const regenerationReason = getRegenerationReason(record['Notas']);
   const steps = STEPS[tipo];
   if (!steps) throw new Error(`[pipeline] Unknown post type: ${tipo}`);
 
@@ -71,7 +75,7 @@ export async function runPipeline(recordId) {
       await persistStep(stepName, tipo, recordId, ctx);
     } catch (err) {
       console.error(`[pipeline] ${recordId} — step "${stepName}" failed: ${err.message}`);
-      await markError(recordId, stepName, err.message).catch(() => {});
+      await markError(recordId, stepName, err.message, regenerationReason, record['Notas'] ?? '').catch(() => {});
       await sendErrorAlert({
         recordId,
         stepName,
@@ -84,6 +88,22 @@ export async function runPipeline(recordId) {
 
   console.log(`[pipeline] ${recordId} — complete`);
   return { success: true };
+}
+
+// ─── field validation ─────────────────────────────────────────────────────────
+
+// Spec section 6.4's "matriz editorial mínima": generation should not start
+// with a gap in the required fields. Previously an empty Pilar/Audiencia/
+// Destino/CTA would silently interpolate as the literal string "undefined"
+// into the Claude prompt (see generate-content.js's userMessage template)
+// instead of failing loudly. Throwing here reuses the existing error path —
+// runPipeline's catch block already marks Estado=Error and sends an alert.
+function validateRequiredFields(record) {
+  const REQUIRED = ['Pilar', 'Audiencia', 'Destino/Tema', 'CTA', 'Tipo de post'];
+  const missing = REQUIRED.filter(field => !record[field]);
+  if (missing.length) {
+    throw new Error(`[pipeline] Missing required fields: ${missing.join(', ')}`);
+  }
 }
 
 // ─── step executor ────────────────────────────────────────────────────────────
@@ -123,6 +143,23 @@ async function runStep(stepName, tipo, record, ctx) {
           }
         }
       }
+
+      // Code-level backstop for the generic aspirational clichés flagged in
+      // the July marketing review (spec 8.3) — prompt-only instructions had
+      // already drifted inconsistently across generate-content.js/generate-
+      // carousel.js/humanize-caption.js, which is exactly the failure mode
+      // that produced this rule in the first place. Same mechanism as the
+      // cost-figure check above: reject early (before humanize spends an API
+      // call) so the record surfaces for regeneration instead of publishing.
+      for (const text of textFields) {
+        const hits = flagRestrictedPhrases(text);
+        if (hits.length) {
+          throw new Error(
+            `[check] Restricted aspirational phrase detected: "${hits[0]}" — regenerate this record with more specific, concrete language.`
+          );
+        }
+      }
+
       return ctx;
     }
 
@@ -239,28 +276,30 @@ function toPublicUrl(filename) {
 async function persistStep(stepName, tipo, recordId, ctx) {
   switch (stepName) {
 
-    case 'caption':
+    case 'caption': {
+      let result;
       if (tipo === 'carousel') {
-        return saveStep(recordId, 'caption', {
+        result = await saveStep(recordId, 'caption', {
           'Caption generado': ctx.caption,
           'Slides JSON':      JSON.stringify(ctx.slides),
         });
-      }
-      if (tipo === 'reel') {
-        return saveStep(recordId, 'caption', {
+      } else if (tipo === 'reel') {
+        result = await saveStep(recordId, 'caption', {
           'Caption generado':   ctx.caption,
           'Descripción visual': ctx.visual,
           'Hook':               ctx.hook ?? '',
           'Slides JSON':        JSON.stringify(ctx.scenes ?? []),
         });
+      } else {
+        result = await saveStep(recordId, 'caption', {
+          'Caption generado':   ctx.caption,
+          'Descripción visual': ctx.visual,
+          'Hook':               ctx.hook ?? '',
+          ...(ctx.newsMeta ? { Notas: ctx.newsMeta } : {}),
+        });
       }
-      return saveStep(recordId, 'caption', {
-        'Caption generado':   ctx.caption,
-        'Descripción visual': ctx.visual,
-        'Hook':               ctx.hook ?? '',
-        // news_update: store the covered story so future runs can avoid repeats
-        ...(ctx.newsMeta ? { Notas: ctx.newsMeta } : {}),
-      });
+      return result;
+    }
 
     case 'check':
       return saveStep(recordId, 'check', {});
@@ -311,7 +350,10 @@ async function persistStep(stepName, tipo, recordId, ctx) {
       return saveStep(recordId, 'video', { 'URL Video': ctx.videoUrl });
 
     case 'save':
-      return saveStep(recordId, 'save', { Estado: 'Pendiente revisión' });
+      return saveStep(recordId, 'save', {
+        Estado: 'Pendiente revisión',
+        ...(ctx.regenerationReason && !ctx.newsMeta ? { Notas: '' } : {}),
+      });
   }
 }
 

@@ -1,4 +1,5 @@
 import { withRetry } from './utils/retry.js';
+import { buildRegenerationFields } from './utils/regeneration.js';
 
 const AT_BASE = 'https://api.airtable.com/v0';
 
@@ -100,20 +101,29 @@ export async function markEnCola(recordId) {
  * @param {string} recordId
  * @param {string} stepName   Step that failed
  * @param {string} message    Error message
+ * @param {string|null} regenerationReason  Marketing feedback to preserve across retry
+ * @param {string} previousNotes  Existing notes containing optional news metadata
  */
-export async function markError(recordId, stepName, message) {
-  await patchRecord(recordId, {
-    Estado: 'Error',
-    Notas:  `[${stepName}]: ${message}`,
-  });
+export async function markError(recordId, stepName, message, regenerationReason = null, previousNotes = '') {
+  const errorNote = `[${stepName}]: ${message}`;
+  const newsNote = previousNotes.split(/\r?\n/).find(line => line.trim().startsWith('[news]'));
+  const notes = [
+    errorNote,
+    regenerationReason ? `[rejected] ${regenerationReason}` : '',
+    newsNote ?? '',
+  ].filter(Boolean).join('\n');
+  await patchRecord(recordId, { Estado: 'Error', Notas: notes });
 }
 
 /**
- * Sets Estado to 'Omitir' — skips the record in all future pipeline runs.
- * Used by the review dashboard reject action.
+ * Clears generated output and queues a rejected post for a complete regeneration.
+ * The rejection note is preserved so the generators can address it explicitly.
+ *
+ * @param {string} recordId
+ * @param {string} regenerationNote
  */
-export async function markOmitir(recordId) {
-  await patchRecord(recordId, { Estado: 'Omitir' });
+export async function resetForRegeneration(recordId, regenerationNote) {
+  await patchRecord(recordId, buildRegenerationFields(regenerationNote));
 }
 
 /**
@@ -201,6 +211,41 @@ export async function fetchRecentNewsStories(limit = 4) {
  */
 export async function markApproved(recordId) {
   await patchRecord(recordId, { Estado: 'Aprobado' });
+}
+
+/**
+ * Fetches every record in the table with all fields, paginating through
+ * Airtable's offset cursor. Used by backup-airtable.js to snapshot the full
+ * calendar — unlike the other fetch* helpers above, this is not scoped to a
+ * single Estado and does not restrict which fields come back.
+ *
+ * @returns {Promise<Array>} Array of Airtable record objects ({ id, fields, createdTime })
+ */
+export async function fetchAllRecords() {
+  const records = [];
+  let offset;
+
+  do {
+    const page = await withRetry(async () => {
+      const params = new URLSearchParams();
+      if (offset) params.set('offset', offset);
+
+      const resp = await fetch(`${tableUrl()}?${params}`, { headers: authHeaders() });
+      if (!resp.ok) {
+        const body = await resp.text();
+        console.error(`[airtable] list all ${resp.status} body:`, body);
+        const err  = new Error(`Airtable list failed (HTTP ${resp.status})`);
+        err.status = resp.status;
+        throw err;
+      }
+      return resp.json();
+    });
+
+    records.push(...(page.records ?? []));
+    offset = page.offset;
+  } while (offset);
+
+  return records;
 }
 
 /**

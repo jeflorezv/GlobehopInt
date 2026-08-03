@@ -7,10 +7,17 @@
 // descriptors only) but every profile still traces back to a region via its
 // comment, so the full regional roster keeps rotating under the hood.
 // Gender is alternated deterministically per Airtable record ID; the profile
-// index rotates through the full pool via the publish week (mirrors
-// pickTopic in variety.js) so every region appears before any repeat.
+// index rotates through the full pool via the publish week PLUS the day slot
+// (mirrors australia-locations.js's DAY_SLOTS) so every region appears before
+// any repeat, and two same-gender posts in the same calendar week no longer
+// collide on the exact same profile (a real bug: the old index depended only
+// on week + gender, so any two same-week same-gender posts got the byte-
+// identical character description).
 
 import { hashStr, weekIndex } from './variety.js';
+
+// Posting days → slot index, same mapping as australia-locations.js.
+const DAY_SLOTS = { 1: 0, 3: 1, 5: 2, 6: 3 }; // Mon, Wed, Fri, Sat
 
 const FEMALE_PROFILES = [
   // CO_FEMALE_MEDELLIN_01
@@ -83,9 +90,14 @@ export function selectCharacter(record = {}) {
   const profiles = isFemale ? FEMALE_PROFILES : MALE_PROFILES;
 
   const fecha = record['Fecha publicación'] ?? '';
-  const idx = /^\d{4}-\d{2}-\d{2}$/.test(fecha)
-    ? (hashStr(`char:${isFemale ? 'female' : 'male'}`) + weekIndex(fecha)) % profiles.length
-    : hashStr(`char:idx:${id}`) % profiles.length;
+  let idx;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    const date = new Date(...fecha.split('-').map((v, i) => i === 1 ? Number(v) - 1 : Number(v)));
+    const slot = DAY_SLOTS[date.getDay()] ?? date.getDay() % 4;
+    idx = (hashStr(`char:${isFemale ? 'female' : 'male'}`) + weekIndex(fecha) * 4 + slot) % profiles.length;
+  } else {
+    idx = hashStr(`char:idx:${id}`) % profiles.length;
+  }
 
   return {
     gender: isFemale ? 'female' : 'male',
