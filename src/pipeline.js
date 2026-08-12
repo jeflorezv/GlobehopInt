@@ -219,13 +219,21 @@ async function runStep(stepName, tipo, record, ctx) {
         return ctx;
       }
       if (tipo === 'reel' && ctx.scenes?.length) {
-        // Upload each scene image to CDN (Kling requires public URLs)
         const cdnScenes = await Promise.all(
-          ctx.scenes.map(async scene => ({
-            ...scene,
-            imageUrl: await uploadUrlToCdn(scene.imageUrl),
-          }))
+          ctx.scenes.map(async scene => {
+            const imageUrl = isIdeogramUrlExpired(scene.imageUrl)
+              ? (await generateImage(record, { ...ctx, visual: scene.visual })).imageUrl
+              : scene.imageUrl;
+            return { ...scene, imageUrl: await uploadUrlToCdn(imageUrl) };
+          })
         );
+        // Persist the now-permanent CDN URLs immediately, before the Kling loop
+        // below can fail partway through. Keeps "Paso completado" at 'images'
+        // (unchanged) so a retry still resumes at 'video' — but ctx.scenes on
+        // that retry will carry Cloudinary URLs instead of expired Ideogram
+        // ones, so isIdeogramUrlExpired short-circuits and already-regenerated
+        // scenes aren't paid for and regenerated a second time.
+        await saveStep(record.id, 'images', { 'Slides JSON': JSON.stringify(cdnScenes) });
         // Generate Kling clips sequentially to stay within API rate limits
         const videoScenes = [];
         for (const scene of cdnScenes) {
@@ -269,6 +277,23 @@ async function brandSingle(ctx, tipo) {
 function toPublicUrl(filename) {
   const base = (process.env.RAILWAY_PUBLIC_URL ?? '').replace(/\/$/, '');
   return `${base}/images/${filename}`;
+}
+
+const IDEOGRAM_EXPIRY_BUFFER_SECONDS = 60;
+
+function isIdeogramUrlExpired(url) {
+  if (!url) return true;
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== 'ideogram.ai' && !parsed.hostname.endsWith('.ideogram.ai')) return false;
+
+    const exp = Number(parsed.searchParams.get('exp'));
+    return !Number.isFinite(exp)
+      || Date.now() / 1000 + IDEOGRAM_EXPIRY_BUFFER_SECONDS >= exp;
+  } catch {
+    return true;
+  }
 }
 
 // ─── Airtable persistence per step ───────────────────────────────────────────
