@@ -1,6 +1,6 @@
 # GlobeHop International — Instagram Automation
 
-Automated pipeline publishing 4 Instagram posts/week (Mon/Wed/Fri/Sat, 8am Bogotá) for a Colombian international education agency. Content is AI-generated, stored in Airtable for human review, and published after approval. Triggered by Make.com; runs on Railway.
+Automated pipeline publishing 4 Instagram posts/week (Mon/Wed/Fri/Sat, 8am Bogotá) for GlobeHop, an international education agency with a presence in Sydney, Australia and Medellín, Colombia. Content is AI-generated, stored in Airtable for human review, and published after approval. Triggered by Make.com; runs on Railway. Australia is the current production destination and GlobeHop's primary area of expertise.
 
 ---
 
@@ -54,7 +54,7 @@ instagram-automation/
 │   ├── send-alert.js            SendGrid — error alerts + publish confirmations
 │   └── utils/
 │       ├── retry.js             Shared exponential backoff wrapper
-│       ├── characters.js        Colombian character library — 11 profiles, selectCharacter()
+│       ├── characters.js        Latin American character library — 23 profiles, selectCharacter()
 │       ├── fetch-guard.js       SSRF allowlist — assertAllowedUrl() for all external fetches
 │       ├── australia-locations.js  City/landmark rotation for Australia CITY LOCK
 │       ├── pillar-rotation.js   Shared PILLAR_ROTATION + CTA_BY_PILLAR (7 pillars, 8-week cycle)
@@ -201,6 +201,14 @@ En cola → (pipeline) → Pendiente revisión → (Aprobar) → Aprobado → (p
 - All external URLs fetched by the pipeline (Ideogram, Kling, Cloudinary) are validated against an allowlist in `utils/fetch-guard.js` before the HTTP request is made (SSRF protection)
 - Stop and ask before: Airtable schema changes, webhook URL changes, Instagram API version changes
 
+### Ideogram URL expiry self-heal (reel `video` step)
+
+**Added 2026-08-13** after a production reel (`recpAyFtSzv1AfRFO`) failed with a `410 Gone` from Cloudinary — Ideogram v3 image URLs are ephemeral (`https://ideogram.ai/api/images/ephemeral/...png?exp=<unix-ts>&sig=...`) and can expire between the `images` step (which persists them to Airtable's `Slides JSON`) and a later or resumed `video` step reusing the stale URL.
+
+- `pipeline.js`'s `isIdeogramUrlExpired(url)` checks the `exp` query param (60s safety buffer) against the current time, using subdomain-inclusive hostname matching (`host === 'ideogram.ai' || host.endsWith('.ideogram.ai')`) — same pattern as `fetch-guard.js`'s allowlist.
+- In the reel `video` step, any expired scene image is regenerated via `generateImage()` before upload to Cloudinary; unexpired ones are reused as-is.
+- The refreshed CDN URLs are persisted back to Airtable (`saveStep(record.id, 'images', ...)`) *before* the sequential Kling loop runs — so a retry after a partial Kling failure resumes with permanent Cloudinary URLs already in place instead of re-detecting expiry and paying to regenerate images a second time. `Paso completado` stays at `'images'`, so retries still correctly resume at `'video'`.
+
 ---
 
 ## Image Quality Notes
@@ -242,28 +250,29 @@ All image prompts must produce **clear blue sky, bright sunshine, or warm sunris
 
 - **Aspirational framing, narrowed 2026-07-17:** Only `destination_spotlight` is required to lead with Australia's lifestyle appeal now. The original rule also forced `student_story`, `agency_promo`, and `city_spotlight` into the same "lifestyle/opportunity/growth" opening, which made 4 of 7 pillars read as the same generic inspirational post regardless of topic — exactly the "looks like one inspirational Australia page" complaint from marketing feedback. Each of those three pillars now opens specific to its own content instead (see the POSITIVE, ASPIRATIONAL FRAMING block in `generate-content.js` and the equivalent Spanish instruction in `generate-carousel.js`). `visa_tip` and `student_life` may open with a practical question or "how to" framing. `myth_vs_reality` opens with the myth itself stated plainly — a distinct format exempt from this rule.
 - **Content purpose rule:** every post must serve exactly one of three outcomes — "quiero estudiar en Australia" (destination_spotlight, city_spotlight), "GlobeHop sabe ayudarme" (visa_tip, student_life, agency_promo), or "confío en GlobeHop" (student_story, myth_vs_reality). Added to stop posts blurring all three into one generic message.
-- **No unverifiable crowd-size claims:** never "miles de colombianos", "cientos de estudiantes", "muchos ya lo hicieron", "cada vez más familias colombianas eligen Australia" — flagged directly by marketing as a repetitive, unverifiable pattern. Prompt rules in `generate-content.js`, `generate-carousel.js`, `humanize-caption.js`.
+- **No unverifiable crowd-size claims:** never "miles de estudiantes latinoamericanos", "cientos de estudiantes", "muchos ya lo hicieron", "cada vez más familias latinoamericanas eligen Australia" — flagged directly by marketing as a repetitive, unverifiable pattern. Prompt rules in `generate-content.js`, `generate-carousel.js`, `humanize-caption.js`.
 - **Consultation is always free, not just the first one:** never "primera asesoría gratis" / "asesoría inicial sin costo". Enforced at two levels like the dash rule below — prompt instructions plus a deterministic safety net, `fixConsultationClaim()` in `src/utils/text.js`, applied in `pipeline.js`'s `humanize` step alongside `stripDashes()`.
-- **Audience is Latin America, not just Colombia:** GlobeHop serves students across LatAm with a strong Colombian base. Copy defaults to "estudiantes latinoamericanos" or addresses the reader directly; "colombianos" is used only when a topic is genuinely Colombia-specific. Updated in `generate-content.js`, `generate-carousel.js` (default audience fallback), and `humanize-caption.js`.
+- **Audience is Latin America broadly, updated 2026-08-08:** GlobeHop serves students across all of LatAm — copy always defaults to "estudiantes latinoamericanos" or direct address to the reader, and never singles out Colombia or any other specific country as the audience (previously Colombia was permitted "when genuinely Colombia-specific"; that exception was removed after posts kept referring to Colombia specifically). Updated in `generate-content.js`, `generate-carousel.js`, `generate-news.js`, and `humanize-caption.js`.
+- **Company description updated 2026-08-08:** GlobeHop is now described in every system prompt as "an international education agency with a presence in Sydney, Australia and Medellín, Colombia" (previously "a Colombian international education consultancy based in Bogotá") — this reflects the company's own official description, distinct from the audience-framing rule above. Australia remains GlobeHop's stated primary destination and area of expertise, matching current production scope (Australia-only). Destinations beyond Australia (Ireland, Canada, Malta, Spain, UAE) are mentioned in `generate-carousel.js`'s system prompt for brand-context completeness only — the pipeline does not currently generate content for them (see Current Production Scope). Updated in `generate-content.js`, `generate-carousel.js`, `generate-news.js`, `humanize-caption.js`, and this file's top description line.
 - **No em dashes or spaced hyphens in Spanish text:** Spanish doesn't use dashes as punctuation the way English does. Enforced at two levels — prompt rules in `generate-content.js`, `generate-carousel.js`, and `humanize-caption.js`, plus a deterministic safety net (`stripDashes()` in `src/utils/text.js`) applied in `pipeline.js`'s `humanize` step to caption, hook, every carousel slide field, and every reel scene's text, regardless of model compliance.
 - **Hook model examples rewritten 2026-07-17:** the hardcoded "model examples" in `generate-content.js`'s hook field description were generic transformation lines ("tu mejor versión", "miles de colombianos ya dieron ese paso") that Claude was echoing near-verbatim across posts. Replaced with fewer, more Australia/education-specific examples and an explicit "tone reference only, don't reuse verbatim" instruction.
 
 ---
 
-## Colombian Character Library
+## Latin American Character Library
 
-Character profiles are defined in `src/utils/characters.js`. Full profiles are sourced from `Review/GlobeHop_Female_Male_Character_Library.md` (11 female + 12 male profiles across 7 Colombian regions — Medellín, Cali, Barranquilla, Bogotá, Cartagena, Pereira, Bucaramanga). They are injected into image prompts only (not captions or hooks) via a `CHARACTER LOCK` block in the Claude user message.
+Character profiles are defined in `src/utils/characters.js`. Full prompts were originally sourced from `Review/GlobeHop_Female_Male_Character_Library.md` (11 female + 12 male profiles, appearance descriptors rooted in 7 Colombian regions — Medellín, Cali, Barranquilla, Bogotá, Cartagena, Pereira, Bucaramanga). They are injected into image prompts only (not captions or hooks) via a `CHARACTER LOCK` block in the Claude user message. **Updated 2026-08-08:** every profile's nationality label was genericized from "Colombian" to "Latin American" (appearance, skin tone, and regional variety are unchanged — only the explicit country label was removed) to stop posts reading as Colombia-exclusive; the internal `CO_FEMALE_MEDELLIN_01`-style region comments are left as-is since they never reach the prompt text.
 
 **Selection logic (`selectCharacter(record)`):**
 - `record.id` is set explicitly in `pipeline.js` (`record.id = recordId`) because `fetchRecord()` returns only fields (no `.id`). This must be present for gender alternation to work.
 - Gender alternates deterministically per Airtable record ID (`hashStr('char:' + id) % 2`) — roughly 50/50 across posts
 - All pillars share the same full profile pool (no per-pillar subsetting). The profile index rotates through every regional profile via the publish week — same mechanism as `pickTopic` — so every region cycles through before any repeat; falls back to a record-ID hash when there's no parseable publish date
 - **No city or region of origin is included in the prompt text** — appearance descriptors only (region is tracked only via the `// CO_FEMALE_MEDELLIN_02`-style comment above each profile, for traceability back to the source file)
-- Each profile includes photography style anchors (`authentic Colombian appearance`, `documentary photography`, `natural skin texture`, etc.) to prevent Ideogram from rendering generic AI faces
+- Each profile includes photography style anchors (`authentic Latin American appearance`, `documentary photography`, `natural skin texture`, etc.) to prevent Ideogram from rendering generic AI faces
 
 Both `generate-content.js` (single_photo/reel) and `generate-carousel.js` use `selectCharacter(record)`.
 
-**Group scenes:** the system prompt's GROUP SCENE DIVERSITY RULE (in `generate-content.js`) governs any scene with more than one person (the "Group of 2–4 multicultural students" / "Friends of different backgrounds" archetypes, or the reel's `scene_student_life`): the CHARACTER LOCK person is exactly one of the people in frame, and every other person must visibly read as a different international background — never a clone of the same face, never additional Colombian-looking people.
+**Group scenes:** the system prompt's GROUP SCENE DIVERSITY RULE (in `generate-content.js`) governs any scene with more than one person (the "Group of 2–4 multicultural students" / "Friends of different backgrounds" archetypes, or the reel's `scene_student_life`): the CHARACTER LOCK person is exactly one of the people in frame, and every other person must visibly read as a different international background — never a clone of the same face, never additional Latin-American-looking people.
 
 **Wildlife realism:** the shared negative prompt (see below) blocks `plastic figure, toy figurine, statue, taxidermy, stuffed animal, doll-like animal`; the WILDLIFE SCENE DIRECTIVE in `generate-content.js` additionally asserts the animal must read as a real, living creature in National-Geographic-style wildlife photography.
 
@@ -325,15 +334,16 @@ Expanded 2026-07-14 from 4 pillars to 7, to fix repetitive topics/copy and align
 
 ### Deferred marketing feedback (2026-07-17)
 
-Three items from marketing's feedback round are intentionally not yet implemented, pending decisions:
-- **Parent/child decision-maker framing** ("Dejaste ir a tu hija...", the `padres` audience segment, carousel `T03 Parent Content`) — retiring or reworking this needs a decision on replacement framing, not just deletion.
+Two items from marketing's feedback round are intentionally not yet implemented, pending decisions:
 - **CTA diversification beyond "Escribe «AUSTRALIA» al DM"** — that exact phrasing drives a live ManyChat DM-keyword automation (see the hook field comment in `generate-content.js`). Need to confirm whether ManyChat also triggers off comments before safely rotating in comment/save/share-based CTAs as primary lead-capture mechanisms.
 - **Real people — students, Yamile, team, institution visits, testimonials** — the pipeline has no path today for the marketing team to attach real photos/video instead of Ideogram generation; every image is AI-generated. Needs a new capability (e.g. an Airtable field that skips the `image`/`render` step when real media is supplied) plus an ongoing supply of real content from the team. Blocks the "10% team" pillar slice and the AI/real-media balance marketing asked for.
+
+**Resolved 2026-08-12 — Parent/child decision-maker framing retired.** Marketing flagged a live carousel that addressed parents ("Dejaste ir a tu hija...") — all copy must speak to the prospective student directly, never their parents. Decision: retire, not rework. `padres` removed as a selectable `Audiencia` value everywhere it was generatable — `src/utils/pillar-rotation.js`'s `AUDIENCE_ROTATION` (18 slots, 100% student-facing), `src/generate-content.js`'s AUDIENCE SEGMENTS block, `scripts/setup-airtable.js`'s `Audiencia` field choices and seeding `AUDIENCES` array, and `scripts/demo-week.js`'s demo record. Carousel template `T03 Parent Content` removed from `src/generate-carousel.js`'s template list and its arc-exception reference. The already-queued 2026-08-12 `padres`-audience carousel record was left untouched by request — this only prevents future posts from targeting parents. Live Airtable's `Audiencia` field still has the `padres` choice (schema edits require explicit confirmation per the Guard Rails section) — it just won't be assigned by any seeding or generation path going forward.
 
 ### News posts (`news_update` pillar)
 
 `src/generate-news.js` runs a research phase before generation using the Anthropic `web_search` server tool:
-- Finds one story from the last ~14 days relevant to Colombian students/parents (visa policy, intakes, scholarships, work rules, cost of living, safety)
+- Finds one story from the last ~14 days relevant to Latin American students/parents (visa policy, intakes, scholarships, work rules, cost of living, safety)
 - **Hybrid sourcing:** if the team pastes an article URL into the record's `Notas` field before generation, that story is used instead of searching
 - The story is injected into `generate-content.js` as a `NEWS LOCK`; the caption mentions the source naturally, never copies money figures (the `check` step blocks them), and always redirects to GlobeHop for exact details
 - The covered story is written back to `Notas` as `[news] headline — url`; `fetchRecentNewsStories()` feeds these into future runs so stories don't repeat
