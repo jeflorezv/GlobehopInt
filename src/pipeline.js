@@ -40,7 +40,16 @@ export async function runPipeline(recordId) {
     return { skipped: true };
   }
 
-  validateRequiredFields(record);
+  const regenerationReason = getRegenerationReason(record['Notas']);
+
+  try {
+    validateRequiredFields(record);
+  } catch (err) {
+    console.error(`[pipeline] ${recordId} — validation failed: ${err.message}`);
+    await markError(recordId, 'validate', err.message, regenerationReason, record['Notas'] ?? '').catch(() => {});
+    await sendErrorAlert({ recordId, stepName: 'validate', error: err, retryUrl: retryUrl(recordId) }).catch(() => {});
+    throw err;
+  }
 
   const destino = record['Destino/Tema'] ?? '';
   if (!/australia/i.test(destino)) {
@@ -49,7 +58,6 @@ export async function runPipeline(recordId) {
   }
 
   const tipo  = record['Tipo de post'];
-  const regenerationReason = getRegenerationReason(record['Notas']);
   const steps = STEPS[tipo];
   if (!steps) throw new Error(`[pipeline] Unknown post type: ${tipo}`);
 
@@ -75,7 +83,12 @@ export async function runPipeline(recordId) {
       await persistStep(stepName, tipo, recordId, ctx);
     } catch (err) {
       console.error(`[pipeline] ${recordId} — step "${stepName}" failed: ${err.message}`);
-      await markError(recordId, stepName, err.message, regenerationReason, record['Notas'] ?? '').catch(() => {});
+      // Prefer ctx.newsMeta over record['Notas'] — the caption step persists
+      // the [news] citation to Airtable but this in-memory `record` was
+      // fetched once at the top of runPipeline and never refreshed, so on a
+      // failure after caption succeeded, record['Notas'] is a stale
+      // pre-caption snapshot that would silently drop the citation.
+      await markError(recordId, stepName, err.message, regenerationReason, ctx.newsMeta ?? record['Notas'] ?? '').catch(() => {});
       await sendErrorAlert({
         recordId,
         stepName,
@@ -96,8 +109,9 @@ export async function runPipeline(recordId) {
 // with a gap in the required fields. Previously an empty Pilar/Audiencia/
 // Destino/CTA would silently interpolate as the literal string "undefined"
 // into the Claude prompt (see generate-content.js's userMessage template)
-// instead of failing loudly. Throwing here reuses the existing error path —
-// runPipeline's catch block already marks Estado=Error and sends an alert.
+// instead of failing loudly. Just throws — the call site in runPipeline
+// wraps this in its own try/catch (mirroring the per-step failure path)
+// since this runs before the step loop starts and isn't covered by it.
 function validateRequiredFields(record) {
   const REQUIRED = ['Pilar', 'Audiencia', 'Destino/Tema', 'CTA', 'Tipo de post'];
   const missing = REQUIRED.filter(field => !record[field]);
@@ -128,6 +142,7 @@ async function runStep(stepName, tipo, record, ctx) {
         ctx.hook,
         ...(ctx.slides ?? []).flatMap(s => [
           s.headline, s.subtext, s.body, s.stat, s.statLabel,
+          s.tag, s.keyword, s.action, s.offer, s.savePrompt,
           ...(s.items ?? []),
         ]),
         ...(ctx.scenes ?? []).map(s => s.text),
@@ -408,6 +423,22 @@ function ctxFromRecord(record) {
       else                 ctx.slides = parsed;
     } catch {}
   }
+
+  // Restore regenerationReason so a retry that resumes past the caption step
+  // (where it's normally set by generateContent/generateCarousel) still
+  // triggers the save step's Notas cleanup — otherwise a stale "[rejected]
+  // ..." note persists in Notas forever after a successful regeneration.
+  const reason = getRegenerationReason(record['Notas']);
+  if (reason) ctx.regenerationReason = reason;
+
+  // Restore newsMeta the same way — the save step only clears Notas when
+  // `regenerationReason && !newsMeta` (news posts keep their Notas citation
+  // instead of being wiped). Without this, restoring regenerationReason
+  // above would wrongly wipe a news_update post's [news] citation on any
+  // retry that resumes past caption, since newsMeta would look unset even
+  // though the citation is still sitting in Notas.
+  const newsLine = (record['Notas'] ?? '').split(/\r?\n/).find(line => line.trim().startsWith('[news]'));
+  if (newsLine) ctx.newsMeta = newsLine.trim();
 
   return ctx;
 }

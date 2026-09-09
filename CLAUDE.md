@@ -209,6 +209,16 @@ En cola → (pipeline) → Pendiente revisión → (Aprobar) → Aprobado → (p
 - In the reel `video` step, any expired scene image is regenerated via `generateImage()` before upload to Cloudinary; unexpired ones are reused as-is.
 - The refreshed CDN URLs are persisted back to Airtable (`saveStep(record.id, 'images', ...)`) *before* the sequential Kling loop runs — so a retry after a partial Kling failure resumes with permanent Cloudinary URLs already in place instead of re-detecting expiry and paying to regenerate images a second time. `Paso completado` stays at `'images'`, so retries still correctly resume at `'video'`.
 
+### Pipeline resilience fixes (ultrareview, 2026-09-09)
+
+Five nit-severity gaps found by an automated code review, all fixed the same day:
+
+- **Validation failures now alert:** `validateRequiredFields(record)` used to throw before `runPipeline`'s step-loop try/catch existed, so a record missing `Pilar`/`Audiencia`/`Destino`/`CTA`/`Tipo de post` failed silently from the marketing team's perspective — no `markError`, no alert email, Estado just stayed wherever it was. Now wrapped in its own try/catch that mirrors the step-failure path.
+- **Carousel CTA-slide fields now checked for restricted content:** the `check` step's cost-figure/restricted-phrase scan missed `tag`/`keyword`/`action`/`offer`/`savePrompt` — five carousel slide fields that render directly on the CTA/statement slides and that `humanize` already cleans. Added to the scanned field list.
+- **News citation no longer dropped on a late-step failure:** `markError` was reading a stale, pre-caption snapshot of `Notas` on any post-caption step failure, so a `news_update` post's `[news] headline — url` citation (persisted by the caption step) could get silently overwritten by the error note. Now prefers `ctx.newsMeta` when set.
+- **Team-pasted article URLs no longer silently ignored:** `extractUrl()` in `generate-news.js` had been narrowed to only match a `[news]`-prefixed line (to stop retries re-citing an old story), but CLAUDE.md's documented flow has the team paste a *bare* URL into Notas — which no longer matched. Fixed to accept a bare URL while still ignoring `[news]`-prefixed lines (which are always pipeline-written citations, never team input).
+- **Stale `[rejected]` note no longer persists after a successful regeneration:** `ctx.regenerationReason` was only ever set during the `caption` step, so a retry resuming past `caption` (after a transient later-step failure) never triggered the `save` step's Notas cleanup. Restored in `ctxFromRecord`, paired with restoring `ctx.newsMeta` the same way — the save step only clears Notas when there's a regeneration reason *and no* news citation, so restoring one without the other would have wiped a news post's citation on retry.
+
 ---
 
 ## Image Quality Notes

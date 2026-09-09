@@ -32,9 +32,14 @@ OUTPUT — valid JSON only, no markdown fences, no explanation:
 {"headline": "<original headline>", "source": "<publication name>", "date": "<YYYY-MM-DD>", "url": "<article url>", "summary": "<4-6 sentence summary in Spanish covering what changed and the practical impact for Latin American students or parents>", "whyItMatters": "<1-2 sentences in Spanish: why a Latin American family planning to study in Australia should care>"}
 `.trim();
 
+// Only picks up a URL the team pasted directly — a line already prefixed
+// with [news] is a citation the pipeline itself wrote (from a prior run or a
+// rejected regeneration), not team input, and must be ignored so a retry
+// doesn't re-cite the same or a rejected story.
 function extractUrl(text = '') {
-  const newsLine = String(text).split(/\r?\n/).find(line => line.trim().startsWith('[news]'));
-  return newsLine?.match(/https?:\/\/[^\s"'<>)]+/)?.[0] ?? null;
+  const lines = String(text).split(/\r?\n/);
+  const bareLine = lines.find(line => !line.trim().startsWith('[news]') && /https?:\/\//.test(line));
+  return bareLine?.match(/https?:\/\/[^\s"'<>)]+/)?.[0] ?? null;
 }
 
 /**
