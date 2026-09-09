@@ -9,7 +9,7 @@ const MODEL  = 'claude-sonnet-4-6';
 const sourcesBlock = getSourcesReferenceBlock();
 
 const SYSTEM = `
-You are a news researcher for GlobeHop, a Colombian international education agency. Your job: find ONE recent news story genuinely useful for Colombian students (and their parents) who are planning to study in Australia.
+You are a news researcher for GlobeHop, an international education agency with a presence in Sydney, Australia and Medellín, Colombia. Your job: find ONE recent news story genuinely useful for Latin American students (and their parents) who are planning to study in Australia.
 
 RELEVANT STORY TYPES (in priority order):
 1. Australian student visa / migration policy changes (Subclass 500, work-hour rules, financial requirements, processing changes)
@@ -17,7 +17,7 @@ RELEVANT STORY TYPES (in priority order):
 3. English test changes (IELTS, PTE) or admission requirement news
 4. Cost-of-living, accommodation, or student-work news affecting international students
 5. Safety, wellbeing, or student-life news relevant to newcomers
-6. Australia–Latin America / Colombia education relations
+6. Australia–Latin America education relations
 
 RULES:
 - The story must be from roughly the last 14 days. Prefer official or reputable sources (Department of Home Affairs, Study Australia, university announcements, ICEF Monitor, The PIE News, SBS, major Australian outlets).
@@ -29,7 +29,7 @@ KNOWN RELIABLE SOURCES — check these first and prefer them when the story over
 ${sourcesBlock}
 ` : ''}
 OUTPUT — valid JSON only, no markdown fences, no explanation:
-{"headline": "<original headline>", "source": "<publication name>", "date": "<YYYY-MM-DD>", "url": "<article url>", "summary": "<4-6 sentence summary in Spanish covering what changed and the practical impact for Colombian students or parents>", "whyItMatters": "<1-2 sentences in Spanish: why a Colombian family planning to study in Australia should care>"}
+{"headline": "<original headline>", "source": "<publication name>", "date": "<YYYY-MM-DD>", "url": "<article url>", "summary": "<4-6 sentence summary in Spanish covering what changed and the practical impact for Latin American students or parents>", "whyItMatters": "<1-2 sentences in Spanish: why a Latin American family planning to study in Australia should care>"}
 `.trim();
 
 function extractUrl(text = '') {
@@ -52,7 +52,7 @@ export async function researchNews(record, coveredStories = []) {
   const userMessage = [
     pastedUrl
       ? `The GlobeHop team pre-selected this article — base the story on it (search only to read/verify it): ${pastedUrl}`
-      : `Search for the most relevant recent news story for Colombian students planning to study in Australia. Today is ${new Date().toISOString().slice(0, 10)}.`,
+      : `Search for the most relevant recent news story for Latin American students planning to study in Australia. Today is ${new Date().toISOString().slice(0, 10)}.`,
     coveredStories.length ? [
       'STORIES ALREADY COVERED — do not pick these again:',
       ...coveredStories.map(s => `- ${s.slice(0, 200)}`),

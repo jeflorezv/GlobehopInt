@@ -23,7 +23,7 @@ export function hashStr(str = '') {
   return h >>> 0;
 }
 
-// Specific content angles per pillar for Colombian students heading to Australia.
+// Specific content angles per pillar for Latin American students heading to Australia.
 // Angles only — never cost figures, never visa requirements stated as fact
 // (those guard rails live in the generator system prompts).
 const TOPIC_BANK = {
@@ -43,7 +43,7 @@ const TOPIC_BANK = {
     'Sports culture: footy, cricket, surf lifesaving and joining a club',
     'Nature at your doorstep: reef, rainforest and mountains in one country',
     'City personalities: what makes each Australian city feel different',
-    'First impressions: what surprises Colombians most when they arrive',
+    'First impressions: what surprises Latin American students most when they arrive',
   ],
   visa_tip: [
     'Getting organized early: the document-gathering mindset that avoids stress',

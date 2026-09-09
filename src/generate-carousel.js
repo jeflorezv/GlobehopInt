@@ -5,14 +5,20 @@ import { pickAustraliaLocation } from './utils/australia-locations.js';
 import { selectCharacter } from './utils/characters.js';
 import { pickTopic, pickHookStructure, pickTemplate } from './utils/variety.js';
 import { getRegenerationReason } from './utils/regeneration.js';
+import { getVettedFactsBlock } from './utils/sources.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL  = 'claude-sonnet-4-6';
 
-const SYSTEM = `Eres el estratega de contenido para GlobeHop International, agencia colombiana boutique de educación internacional (Australia, Irlanda, Canadá, Malta, España, Dubai, EE.UU.).
+// Pillars allowed to cite one fact from the officially-verified VETTED FACTS
+// table (studyaustralia.gov.au) as actual fact — see generate-content.js for
+// the matching English-post rule.
+const VETTED_FACT_PILLARS = new Set(['visa_tip', 'student_life']);
+
+const SYSTEM = `Eres el estratega de contenido para GlobeHop International, agencia de educación internacional con presencia en Sídney, Australia y Medellín, Colombia (destinos: Australia, Irlanda, Canadá, Malta, España, Dubai).
 
 IDIOMA Y VOZ
-- Español colombiano, tuteo, tono cálido e inspirador (amigo que ya estudió afuera)
+- Español latinoamericano neutro (no ligado a un país en particular), tuteo, tono cálido e inspirador (amigo que ya estudió afuera)
 - Menciona GlobeHop naturalmente — nunca suenes corporativo ni vendedor
 - Enfoca en transformación personal, no en datos turísticos
 
@@ -23,8 +29,8 @@ IMPORTANTE — el hook del caption (línea 1) no debe abrir con las dudas o mied
 - Para templates centrados en el destino (T01, T09, T17): abre con algo genuinamente inspirador sobre el lugar o la transformación.
 - Para templates prácticos/educativos (T04, T05, T06, T08, T12, T13, T14, T15, T16, T19, T20, T21): abre con el dato, error o angulo concreto del template, no con una frase de "tu vida va a cambiar". Forzar la apertura aspiracional en estos templates es lo que ha hecho que la cuenta se sienta como una sola página de inspiración en vez de una agencia con contenido educativo real.
 - T02, T03, T07, T10, T11, T18 pueden mantener el arco miedo/reto→realidad dentro de los slides; el caption debe sentirse genuino al tema de ese template, no forzosamente aspiracional.
-NO USES afirmaciones de multitud sin verificar: nunca escribas "miles de colombianos", "muchos estudiantes ya lo hicieron", "cada vez más familias colombianas eligen Australia" ni similares. Habla al lector como individuo, o usa un dato concreto en vez de una multitud vaga.
-GlobeHop es para estudiantes de toda Latinoamérica (con fuerte presencia en Colombia), no solo para colombianos — usa "estudiantes latinoamericanos" o dirígete directo al lector; menciona Colombia solo cuando el tema específicamente lo requiera.
+NO USES afirmaciones de multitud sin verificar: nunca escribas "miles de latinoamericanos", "muchos estudiantes ya lo hicieron", "cada vez más familias latinoamericanas eligen Australia" ni similares. Habla al lector como individuo, o usa un dato concreto en vez de una multitud vaga.
+GlobeHop es para estudiantes de toda Latinoamérica, no solo para colombianos — usa siempre "estudiantes latinoamericanos" o dirígete directo al lector. Nunca destaques a Colombia ni a ningún otro país latinoamericano específico como la audiencia, ni siquiera en contenido de visa o proceso.
 Cada carrusel debe apuntar claramente a uno de tres objetivos: "quiero estudiar en Australia" (destino), "GlobeHop sabe ayudarme" (proceso/experiencia), o "confío en GlobeHop" (evidencia/resultados reales) — que el pillar del post determine cuál.
 
 SELECCIÓN DE TEMPLATE (elige el más adecuado según el pillar + audiencia + destino)
@@ -121,6 +127,7 @@ export async function generateCarousel(record, ctx) {
   const hookStructure = pickHookStructure(record);
   const templateLock = pickTemplate(record, pillar);
   const regenerationReason = getRegenerationReason(record['Notas']);
+  const vettedFacts = VETTED_FACT_PILLARS.has(pillar) ? getVettedFactsBlock() : '';
 
   const userMessage = [
     `Destino: ${destino}`,
@@ -140,6 +147,11 @@ export async function generateCarousel(record, ctx) {
     ].join('\n'),
     templateLock ? [
       `TEMPLATE LOCK — OBLIGATORIO: usa el template T${String(templateLock).padStart(2, '0')} de la tabla SELECCIÓN DE TEMPLATE definida arriba. No elijas otro template.`,
+    ].join('\n') : '',
+    (VETTED_FACT_PILLARS.has(pillar) && vettedFacts) ? [
+      `DATOS VERIFICADOS (fuente oficial, studyaustralia.gov.au) — puedes usar UNO de estos como hecho SOLO si encaja con el ÁNGULO ESPECÍFICO; si ninguno encaja, no los uses. Son los ÚNICOS datos específicos que este pilar puede presentar como hecho — todo lo demás debe mantenerse general y redirigir a GlobeHop:`,
+      vettedFacts,
+      `Nunca menciones una cifra en dólares aunque el dato de capacidad financiera la mencione — describe el requisito, no el número. No cites el nombre de la URL en el texto; una frase natural como "según el sitio oficial de Study Australia" es aceptable si encaja.`,
     ].join('\n') : '',
     [
       `HOOK STRUCTURE LOCK — OBLIGATORIO: construye el headline del slide 1 (hook) usando esta estructura: ${hookStructure.instruction}. Tradúcelo naturalmente al español y al tono de GlobeHop, sin traducir literalmente palabra por palabra.`,

@@ -23,7 +23,7 @@ import { KNOWN_NON_TERMINAL } from '../src/generate-reel.js';
 const IMAGE_URL = process.env.TEST_IMAGE_URL || '';
 
 const TEST_VISUAL =
-  'Young Colombian woman, 26, dark brown wavy hair to her shoulders, slim build, ' +
+  'Young Latin American woman, 26, dark brown wavy hair to her shoulders, slim build, ' +
   'neutral confident expression, smart casual clothes, walking toward the Sydney Opera House, ' +
   'golden hour light, documentary photography style, 35mm lens, real skin texture, ' +
   'no text, no logos. 9:16 vertical.';

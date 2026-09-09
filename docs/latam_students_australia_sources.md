@@ -24,3 +24,20 @@ These sources are best used in four content buckets: official statistics for cre
 ## Suggested post angles
 
 Useful Instagram angles include scholarships, work rights while studying, city comparisons, cost-of-living explainers, visa FAQs, and real student journeys from Latin America to Australia
+
+## Vetted facts (verified against studyaustralia.gov.au, 2026-09-09)
+
+These are the only facts `visa_tip` and `student_life` posts may cite as concrete detail — pulled directly from the official Study Australia site, no invented figures. Exact dollar amounts are intentionally omitted here since the pipeline already bans stating money figures in captions (see CLAUDE.md's Absolute financial rule); cite the requirement category, never the number.
+
+| Fact | Detail | Source |
+|---|---|---|
+| Student visa type | The Student visa (subclass 500) is described as "the most common visa" for international students coming to study in Australia. | [Your guide to visas](https://www.studyaustralia.gov.au/en/plan-your-move/your-guide-to-visas) |
+| Genuine Student requirement | Applicants must meet a Genuine Student (GS) requirement — answering questions about their circumstances, course choice, study history, and reasons for choosing Australia. | [Your guide to visas](https://www.studyaustralia.gov.au/en/plan-your-move/your-guide-to-visas) / [Visa application process](https://www.studyaustralia.gov.au/en/plan-your-move/visa-application-process) |
+| Financial capacity | Applicants must prove sufficient funds to cover tuition, travel, and living costs (do not state the dollar figure in content — money figures are banned from all captions). | [Visa application process](https://www.studyaustralia.gov.au/en/plan-your-move/visa-application-process) |
+| OSHC | Overseas Student Health Cover is mandatory for the entire stay in Australia. | [Visa application process](https://www.studyaustralia.gov.au/en/plan-your-move/visa-application-process) |
+| English proficiency | Applicants must supply a certificate of results from an approved English language test. | [Visa application process](https://www.studyaustralia.gov.au/en/plan-your-move/visa-application-process) |
+| Application process | 10 official stages: Letter of Offer → Confirmation of Enrolment (CoE) → English proficiency proof → Genuine Student requirement → Financial capacity → OSHC → Health requirement (My Health Declaration) → Character requirement → Apply via ImmiAccount → Check travel requirements. | [Visa application process](https://www.studyaustralia.gov.au/en/plan-your-move/visa-application-process) |
+| Work hour limit | Official wording: "you don't work more than 48 hours in a fortnight during study terms and semesters if you are on a student visa." | [Your work rights explained](https://www.studyaustralia.gov.au/en/work-in-australia/work-rights-and-responsibilities/your-work-rights-explained) |
+| First-week tasks | Get a Unique Student Identifier (USI) for university/TAFE study; open a bank account with your eCoE, passport, and proof of address; get a Tax File Number (TFN) to avoid higher tax withholding; get a SIM card; notify your education provider of your residential address within 7 days of arrival (a visa condition, 8533); attend Orientation Week (O-Week); research your city's public transport and student discounts. | [Your first week in Australia](https://www.studyaustralia.gov.au/en/plan-your-move/your-first-week-in-australia) |
+
+**Usage rule:** always pair a cited fact with a reminder to confirm current details with GlobeHop directly — visa rules and figures change, and this list is a snapshot, not a promise it stays accurate indefinitely. Never state a fact from this table as if it will never change.

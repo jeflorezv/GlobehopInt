@@ -8,7 +8,7 @@
 El sistema genera automáticamente 4 publicaciones de Instagram por semana para GlobeHop, usando inteligencia artificial. Cada publicación incluye:
 
 - **Imagen o carrusel** generado por IA con paisajes reales de Australia
-- **Caption** en español colombiano, adaptado al pilar de contenido y la audiencia
+- **Caption** en español latinoamericano neutro, adaptado al pilar de contenido y la audiencia
 - **Hook** (texto impreso sobre la imagen) diseñado para detener el scroll
 
 El equipo de marketing **no necesita crear nada desde cero**. Su rol es revisar, editar si es necesario, y aprobar o rechazar cada publicación antes de que se publique en Instagram.
