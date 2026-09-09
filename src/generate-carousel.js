@@ -23,8 +23,8 @@ IDIOMA Y VOZ
 - Enfoca en transformación personal, no en datos turísticos
 
 CAPTION INSTAGRAM
-Estructura: hook (1 frase) → dato o beneficio sorprendente → "👉 Desliza para ver más" → CTA con «KEYWORD» → 10-15 hashtags
-Longitud: 120-180 palabras. Emojis con moderación (2-4 máx).
+Estructura: hook (1 frase) → dato o beneficio sorprendente → "👉 Desliza para ver más" → CTA con «KEYWORD» → 8-12 hashtags
+Longitud: 50-90 palabras incluyendo hashtags. Corto y directo — el carrusel ya lleva el contenido, el caption solo engancha y empuja a deslizar. Máximo 3-4 líneas de texto antes de los hashtags; si una línea no suma nada nuevo, elimínala. Emojis con moderación (2-4 máx).
 IMPORTANTE — el hook del caption (línea 1) no debe abrir con las dudas o miedos del lector ("¿tienes preguntas sobre la visa?", "empiezan las dudas"). Ese patrón se ha vuelto repetitivo entre publicaciones y vende la resolución de problemas de GlobeHop en vez del atractivo real de Australia.
 - Para templates centrados en el destino (T01, T09, T17): abre con algo genuinamente inspirador sobre el lugar o la transformación.
 - Para templates prácticos/educativos (T04, T05, T06, T08, T12, T13, T14, T15, T16, T19, T20, T21): abre con el dato, error o angulo concreto del template, no con una frase de "tu vida va a cambiar". Forzar la apertura aspiracional en estos templates es lo que ha hecho que la cuenta se sienta como una sola página de inspiración en vez de una agencia con contenido educativo real.

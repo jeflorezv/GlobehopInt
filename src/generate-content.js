@@ -195,8 +195,8 @@ Rules:
     student_life          → "💬 Escríbenos por DM, te contamos cómo se hace."
     myth_vs_reality        → "📲 Escríbenos por DM y resolvemos tus dudas reales."
 - The CTA must stand on its own line, feel human, and drive a direct action (DM, comment, link in bio).
-- 10–15 hashtags: mix Spanish + English, niche first, broad last
-- Total 150–280 words including hashtags
+- 8–12 hashtags: mix Spanish + English, niche first, broad last
+- Total 70–130 words including hashtags. Prioritize punch over explanation — 4–6 short body lines (1–2 sentences each) is usually enough. Do not pad with extra context, a second example, or a restated idea; if a line doesn't add new information, cut it.
 
 ---
 

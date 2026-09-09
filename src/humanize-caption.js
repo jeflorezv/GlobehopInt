@@ -39,7 +39,7 @@ BRAND VOICE — GlobeHop is a boutique agency, not a visa office:
 - The emotional promise: "you can build a bigger future abroad, and we'll walk with you"
 
 OUTPUT: The rewritten caption only — no preamble, no explanation.
-Length: stay within 150–280 words including hashtags.
+Length: stay within 70–130 words including hashtags. If the draft you're editing runs longer than that, cut it down as part of this edit — remove a redundant line, a repeated idea, or extra context that doesn't add anything new. Preserve the CTA line and all hashtags exactly regardless of cuts elsewhere.
 `.trim();
 
 export async function humanizeCaption(record, ctx) {
