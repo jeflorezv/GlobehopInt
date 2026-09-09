@@ -28,7 +28,7 @@ Longitud: 50-90 palabras incluyendo hashtags. Corto y directo — el carrusel ya
 IMPORTANTE — el hook del caption (línea 1) no debe abrir con las dudas o miedos del lector ("¿tienes preguntas sobre la visa?", "empiezan las dudas"). Ese patrón se ha vuelto repetitivo entre publicaciones y vende la resolución de problemas de GlobeHop en vez del atractivo real de Australia.
 - Para templates centrados en el destino (T01, T09, T17): abre con algo genuinamente inspirador sobre el lugar o la transformación.
 - Para templates prácticos/educativos (T04, T05, T06, T08, T12, T13, T14, T15, T16, T19, T20, T21): abre con el dato, error o angulo concreto del template, no con una frase de "tu vida va a cambiar". Forzar la apertura aspiracional en estos templates es lo que ha hecho que la cuenta se sienta como una sola página de inspiración en vez de una agencia con contenido educativo real.
-- T02, T03, T07, T10, T11, T18 pueden mantener el arco miedo/reto→realidad dentro de los slides; el caption debe sentirse genuino al tema de ese template, no forzosamente aspiracional.
+- T02, T07, T10, T11, T18 pueden mantener el arco miedo/reto→realidad dentro de los slides; el caption debe sentirse genuino al tema de ese template, no forzosamente aspiracional.
 NO USES afirmaciones de multitud sin verificar: nunca escribas "miles de latinoamericanos", "muchos estudiantes ya lo hicieron", "cada vez más familias latinoamericanas eligen Australia" ni similares. Habla al lector como individuo, o usa un dato concreto en vez de una multitud vaga.
 GlobeHop es para estudiantes de toda Latinoamérica, no solo para colombianos — usa siempre "estudiantes latinoamericanos" o dirígete directo al lector. Nunca destaques a Colombia ni a ningún otro país latinoamericano específico como la audiencia, ni siquiera en contenido de visa o proceso.
 Cada carrusel debe apuntar claramente a uno de tres objetivos: "quiero estudiar en Australia" (destino), "GlobeHop sabe ayudarme" (proceso/experiencia), o "confío en GlobeHop" (evidencia/resultados reales) — que el pillar del post determine cuál.
@@ -36,7 +36,6 @@ Cada carrusel debe apuntar claramente a uno de tres objetivos: "quiero estudiar 
 SELECCIÓN DE TEMPLATE (elige el más adecuado según el pillar + audiencia + destino)
 T01 Destination Discovery   → S2:oportunidad S3:beneficio S4:beneficio S5:transformación       [destination_spotlight]
 T02 Student Success Story   → S2:reto S3:decisión S4:viaje S5:resultado                        [student_story]
-T03 Parent Content          → S2:miedo S3:realidad S4:seguridad S5:éxito                      [padres]
 T04 Visa Mistakes           → S2:error#1 S3:error#2 S4:error#3 S5:solución                    [visa_tip]
 T05 Visa Requirements       → S2:requisito1 S3:requisito2 S4:requisito3 S5:pro tip            [visa_tip]
 T06 Budget Planning         → S2:factores que afectan el costo S3:alojamiento (tipos, sin cifras) S4:cómo planificar S5:agenda con GlobeHop [agency_promo/destination_spotlight]

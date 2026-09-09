@@ -129,7 +129,6 @@ Do not blur all three into the same generic "Australia + GlobeHop" message on ev
 AUDIENCE SEGMENTS
 - estudiantes_secundaria: High school students (16–18). Dreams, adventure, first big life decision, peer influence.
 - universitarios: University students (18–25). Career clarity, professional growth, independence, global CV.
-- padres: Parents of prospective students. Safety, ROI, proud parenting, responsible planning.
 - profesionales: Working professionals (25–35). Career pivot, postgrad abroad, salary leap, competitive edge.
 - adultos: Adults 30+. "It's not too late." Personal growth, life goals, reinvention.
 

@@ -220,8 +220,11 @@ export function pickTopic(record = {}, pillar = '') {
 // rather than correlated.
 const SCENE_STRIDE = 7;
 
-// Posting days → slot index, same mapping as australia-locations.js.
-const DAY_SLOTS_SCENE = { 1: 0, 3: 1, 5: 2, 6: 3 }; // Mon, Wed, Fri, Sat
+// Posting days → slot index, same mapping as australia-locations.js. Shared
+// by pickSceneArchetype, pickHookStructure, and pickCaptionFormat below —
+// all three need the day slot mixed in, not just the week, or every post in
+// the same calendar week collapses to the same pick (see pickHookStructure).
+const DAY_SLOTS = { 1: 0, 3: 1, 5: 2, 6: 3 }; // Mon, Wed, Fri, Sat
 
 /**
  * Picks the visual scene archetype for a single_photo record, deterministically.
@@ -242,7 +245,7 @@ export function pickSceneArchetype(record = {}) {
   const fecha = record['Fecha publicación'] ?? '';
   if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
     const date = new Date(...fecha.split('-').map((v, i) => i === 1 ? Number(v) - 1 : Number(v)));
-    const slot = DAY_SLOTS_SCENE[date.getDay()] ?? date.getDay() % 4;
+    const slot = DAY_SLOTS[date.getDay()] ?? date.getDay() % 4;
     const postCount = weekIndex(fecha) * 4 + slot;
     return SCENE_ARCHETYPES[(postCount * SCENE_STRIDE) % n];
   }
@@ -266,18 +269,30 @@ const HOOK_STRUCTURES = [
 ];
 
 /**
- * Picks the hook rhetorical structure for a record, deterministically —
- * same weekIndex-rotation pattern as pickTopic, cycling through all 8
- * structures before any repeat.
+ * Picks the hook rhetorical structure for a record, deterministically.
+ *
+ * Mixes in the day slot (not just the week) — an earlier version keyed only
+ * on weekIndex, so every post Mon/Wed/Fri/Sat of the same calendar week
+ * resolved to the identical structure (all 4 posts forced into the same
+ * MANDATORY hook lock). Same continuous-post-counter technique as
+ * pickSceneArchetype: postCount advances by exactly 1 per post in posting
+ * order, so any 8 consecutive posts (2 weeks) hit every structure with no
+ * within-week collisions.
  *
  * @param {object} record  Airtable record (uses record.id, 'Fecha publicación')
  * @returns {{ id: string, instruction: string }}
  */
 export function pickHookStructure(record = {}) {
   const fecha = record['Fecha publicación'] ?? '';
-  const idx = /^\d{4}-\d{2}-\d{2}$/.test(fecha)
-    ? (hashStr('hookStructure') + weekIndex(fecha)) % HOOK_STRUCTURES.length
-    : hashStr(`hookStructure:${record.id ?? ''}`) % HOOK_STRUCTURES.length;
+  let idx;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    const date = new Date(...fecha.split('-').map((v, i) => i === 1 ? Number(v) - 1 : Number(v)));
+    const slot = DAY_SLOTS[date.getDay()] ?? date.getDay() % 4;
+    const postCount = weekIndex(fecha) * 4 + slot;
+    idx = (hashStr('hookStructure') + postCount) % HOOK_STRUCTURES.length;
+  } else {
+    idx = hashStr(`hookStructure:${record.id ?? ''}`) % HOOK_STRUCTURES.length;
+  }
   return HOOK_STRUCTURES[idx];
 }
 
@@ -291,14 +306,25 @@ const CAPTION_FORMATS = ['A', 'B', 'C', 'D'];
  * Picks which caption format (A-D, described in generate-content.js's system
  * prompt) to force for a record, deterministically.
  *
+ * Mixes in the day slot for the same reason as pickHookStructure — keying
+ * only on weekIndex collapsed all 4 posts of a week onto the identical
+ * FORMAT LOCK. With a 4-slot pool and 4 posts/week, this now guarantees
+ * exactly one of each format every single week.
+ *
  * @param {object} record  Airtable record (uses record.id, 'Fecha publicación')
  * @returns {string} 'A' | 'B' | 'C' | 'D'
  */
 export function pickCaptionFormat(record = {}) {
   const fecha = record['Fecha publicación'] ?? '';
-  const idx = /^\d{4}-\d{2}-\d{2}$/.test(fecha)
-    ? (hashStr('captionFormat') + weekIndex(fecha)) % CAPTION_FORMATS.length
-    : hashStr(`captionFormat:${record.id ?? ''}`) % CAPTION_FORMATS.length;
+  let idx;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    const date = new Date(...fecha.split('-').map((v, i) => i === 1 ? Number(v) - 1 : Number(v)));
+    const slot = DAY_SLOTS[date.getDay()] ?? date.getDay() % 4;
+    const postCount = weekIndex(fecha) * 4 + slot;
+    idx = (hashStr('captionFormat') + postCount) % CAPTION_FORMATS.length;
+  } else {
+    idx = hashStr(`captionFormat:${record.id ?? ''}`) % CAPTION_FORMATS.length;
+  }
   return CAPTION_FORMATS[idx];
 }
 

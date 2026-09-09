@@ -77,17 +77,17 @@ export function pickCTA(record = {}, pillar = '') {
   return pool[idx];
 }
 
-// Weighted, interleaved Audiencia sequence for calendar seeding — replaces a
-// flat 5-way round robin that gave "padres" 20% of all posts against the
-// spec's 10% ceiling (section 5.4/21.1: min 75% student-facing, max 10%
-// family). This 20-slot array yields universitarios 6/20=30%, profesionales
-// 5/20=25%, estudiantes_secundaria 4/20=20%, adultos 3/20=15% (90% student-
-// facing total), padres 2/20=10%, with padres entries spread 8 slots apart
-// (~2 weeks at 4 posts/week) rather than clustered.
+// Weighted, interleaved Audiencia sequence for calendar seeding. "padres"
+// was fully retired 2026-08-12 after marketing rejected parent-addressed
+// copy ("Dejaste ir a tu hija...") — see CLAUDE.md's Resolved 2026-08-12
+// note. This 18-slot array is 100% student-facing: universitarios 6/18≈33%,
+// profesionales 5/18≈28%, estudiantes_secundaria 4/18≈22%, adultos 3/18≈17%
+// (same relative proportions as the old 20-slot array, renormalized after
+// removing padres's 2 slots).
 export const AUDIENCE_ROTATION = [
   'universitarios', 'profesionales', 'estudiantes_secundaria', 'adultos',
-  'universitarios', 'padres',       'profesionales',           'estudiantes_secundaria',
-  'universitarios', 'adultos',      'profesionales',           'estudiantes_secundaria',
-  'universitarios', 'padres',       'profesionales',           'adultos',
-  'universitarios', 'estudiantes_secundaria', 'profesionales', 'universitarios',
+  'universitarios', 'profesionales', 'estudiantes_secundaria', 'universitarios',
+  'adultos',        'profesionales', 'estudiantes_secundaria', 'universitarios',
+  'profesionales',  'adultos',       'universitarios',         'estudiantes_secundaria',
+  'profesionales',  'universitarios',
 ];
