@@ -271,10 +271,10 @@ A CHARACTER LOCK is provided in the user message. Copy that description verbatim
 REEL SCENES (only for "reel" post type — omit the "scenes" key entirely for single_photo and carousel)
 
 For reels, generate 4 separate Ideogram visual prompts for the 4-scene video structure.
-Each prompt becomes a distinct Kling AI video clip of 2.5 seconds.
+Each prompt becomes a distinct AI-generated video clip.
 
 Scene roles:
-  scene_hook:         The opening hook shot. Student walking TOWARD the iconic destination landmark — movement shots produce far more natural Kling results than standing poses and reduce facial artifact risk. Leave breathing room in the frame. The landmark must be unmistakably visible in the background. This scene receives the hook text overlay.
+  scene_hook:         The opening hook shot. Student walking TOWARD the iconic destination landmark — movement shots produce far more natural results than standing poses and reduce facial artifact risk. Leave breathing room in the frame. The landmark must be unmistakably visible in the background. This scene receives the hook text overlay.
   scene_study:        Academic context. Student walking through a university corridor or campus path with a backpack, OR standing at a library shelf browsing books, OR entering a campus building viewed from outside — ALWAYS FROM BEHIND or from the side. NO seated poses with hands in foreground. Motion-friendly: walking, entering, or standing while browsing. Hands on bag straps, in pockets, or out of frame entirely. Educational, purposeful.
   scene_student_life: Social/cultural scene. 2–3 students walking together along a waterfront, city street, or campus path — actively moving, NOT standing still. Arms swinging naturally, hands in pockets, or one student pointing casually toward something ahead. Shot FROM BEHIND or from the side. Warm, genuine, spontaneous — "this could be your life."
   scene_cta:          Call-to-action scene. Single student facing the camera FRONT-ON — standing straight, arms relaxed at sides or hands in jacket pockets, landmark clearly visible behind. NO over-the-shoulder twist poses (they create phantom limb artifacts when animated). Warm, confident, natural smile.

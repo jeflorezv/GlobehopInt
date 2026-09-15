@@ -2,7 +2,7 @@
  * Zero-cost reel overlay preview.
  *
  * Composites all 4 scene overlays (logo + text) onto a real 9:16 image
- * and saves JPEGs to /tmp so you can check layout before spending Kling units.
+ * and saves JPEGs to /tmp so you can check layout before spending on video generation.
  *
  * No API calls — Sharp only.
  *

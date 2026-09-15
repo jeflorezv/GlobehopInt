@@ -9,7 +9,7 @@ Automated pipeline publishing 4 Instagram posts/week (Mon/Wed/Fri/Sat, 8am Bogot
 - **Active destination:** Australia only — all other destinations set to `Omitir`
 - **Active post types:** `single_photo`, `carousel`, and `reel`
 - **News posts:** every 2nd week the Saturday single_photo is pillar `news_update` — grounded in current news via web search (see Content Variety System)
-- **Reels:** active — Kling v2-1 pro, 4 scenes × 5s = 20s, quality validated
+- **Reels:** active — Veo 3.1 (`veo-3.1-generate-preview`, 1080p), 4 scenes × 5s = 20s, migrated from Kling Sept 2026 (Kling account balance became unusable; see changelog below)
 - **Approval flow:** marketing team uses the web review dashboard (see below)
 
 ---
@@ -21,7 +21,7 @@ Automated pipeline publishing 4 Instagram posts/week (Mon/Wed/Fri/Sat, 8am Bogot
 | Runtime | Node.js 20+ ESM — all files use `import`/`export` |
 | AI content | Claude API `claude-sonnet-4-6` — captions, hooks, 4-scene reel prompts (Spanish) |
 | AI images | Ideogram API v3 — photos and carousel slides (`V_3` model, REALISTIC style) |
-| AI video | Kling API (`api.klingai.com`) — image-to-video for reels (paused) |
+| AI video | Google Veo 3.1 (Gemini Developer API, `generativelanguage.googleapis.com`) — image-to-video for reels |
 | Image processing | Sharp — logo overlay on generated images |
 | Data / approval | Airtable REST — content calendar + `Estado` state machine |
 | Scheduling | Make.com — triggers `/generate-next` 1×/week (Monday; one call generates all 4 posts) |
@@ -42,7 +42,7 @@ instagram-automation/
 │   ├── generate-content.js      Claude API — caption + hook + visual prompt (single_photo/reel)
 │   ├── generate-carousel.js     Claude API — 6-slide carousel content + imagePrompts
 │   ├── generate-image.js        Ideogram V_3 — single image (single_photo, reel scenes)
-│   ├── generate-reel.js         Kling API — image-to-video with async polling
+│   ├── generate-reel.js         Veo 3.1 API — image-to-video with async polling
 │   ├── apply-brand.js           Sharp — logo + hook overlay for single_photo; overlay PNGs for video
 │   ├── apply-brand-video.js     FFmpeg — multi-scene assembly, per-scene overlays, music mix
 │   ├── humanize-caption.js      Claude API — rewrite pass to remove AI-ness from caption
@@ -164,8 +164,7 @@ Required on Railway:
 |---|---|
 | `ANTHROPIC_API_KEY` | Claude API key |
 | `IDEOGRAM_API_KEY` | Ideogram API key |
-| `KLING_API_KEY` | Kling API key (paused — keep for when reels resume) |
-| `KLING_API_SECRET` | Kling API secret |
+| `GEMINI_API_KEY` | Google AI Studio / Gemini Developer API key — Veo 3.1 video generation. Requires billing linked to the underlying Google Cloud project (Veo has zero quota on the free tier) |
 | `AIRTABLE_API_KEY` | Airtable personal access token |
 | `AIRTABLE_BASE_ID` | Airtable base ID (appXXXXXXXXXXXXXX) |
 | `AIRTABLE_TABLE_NAME` | Table name (default: `Contenido Instagram`) |
@@ -198,7 +197,7 @@ En cola → (pipeline) → Pendiente revisión → (Aprobar) → Aprobado → (p
 - Airtable records are never deleted mid-pipeline — only `Estado` is updated. Exception: `reset-airtable.js` is the designated reset tool and intentionally deletes all records before reseeding.
 - `WEBHOOK_SECRET` is validated before processing any webhook request using HMAC-normalised constant-time comparison (prevents timing oracle attacks)
 - `/publish` only executes if `Estado === 'Aprobado'`; `/review/:id/approve` publishes directly from `Pendiente revisión`
-- All external URLs fetched by the pipeline (Ideogram, Kling, Cloudinary) are validated against an allowlist in `utils/fetch-guard.js` before the HTTP request is made (SSRF protection)
+- All external URLs fetched by the pipeline (Ideogram, Veo/`generativelanguage.googleapis.com`, Cloudinary) are validated against an allowlist in `utils/fetch-guard.js` before the HTTP request is made (SSRF protection)
 - Stop and ask before: Airtable schema changes, webhook URL changes, Instagram API version changes
 
 ### Ideogram URL expiry self-heal (reel `video` step)
@@ -207,7 +206,7 @@ En cola → (pipeline) → Pendiente revisión → (Aprobar) → Aprobado → (p
 
 - `pipeline.js`'s `isIdeogramUrlExpired(url)` checks the `exp` query param (60s safety buffer) against the current time, using subdomain-inclusive hostname matching (`host === 'ideogram.ai' || host.endsWith('.ideogram.ai')`) — same pattern as `fetch-guard.js`'s allowlist.
 - In the reel `video` step, any expired scene image is regenerated via `generateImage()` before upload to Cloudinary; unexpired ones are reused as-is.
-- The refreshed CDN URLs are persisted back to Airtable (`saveStep(record.id, 'images', ...)`) *before* the sequential Kling loop runs — so a retry after a partial Kling failure resumes with permanent Cloudinary URLs already in place instead of re-detecting expiry and paying to regenerate images a second time. `Paso completado` stays at `'images'`, so retries still correctly resume at `'video'`.
+- The refreshed CDN URLs are persisted back to Airtable (`saveStep(record.id, 'images', ...)`) *before* the sequential video-generation loop runs — so a retry after a partial failure resumes with permanent Cloudinary URLs already in place instead of re-detecting expiry and paying to regenerate images a second time. `Paso completado` stays at `'images'`, so retries still correctly resume at `'video'`.
 
 ### Pipeline resilience fixes (ultrareview, 2026-09-09)
 
@@ -218,6 +217,18 @@ Five nit-severity gaps found by an automated code review, all fixed the same day
 - **News citation no longer dropped on a late-step failure:** `markError` was reading a stale, pre-caption snapshot of `Notas` on any post-caption step failure, so a `news_update` post's `[news] headline — url` citation (persisted by the caption step) could get silently overwritten by the error note. Now prefers `ctx.newsMeta` when set.
 - **Team-pasted article URLs no longer silently ignored:** `extractUrl()` in `generate-news.js` had been narrowed to only match a `[news]`-prefixed line (to stop retries re-citing an old story), but CLAUDE.md's documented flow has the team paste a *bare* URL into Notas — which no longer matched. Fixed to accept a bare URL while still ignoring `[news]`-prefixed lines (which are always pipeline-written citations, never team input).
 - **Stale `[rejected]` note no longer persists after a successful regeneration:** `ctx.regenerationReason` was only ever set during the `caption` step, so a retry resuming past `caption` (after a transient later-step failure) never triggered the `save` step's Notas cleanup. Restored in `ctxFromRecord`, paired with restoring `ctx.newsMeta` the same way — the save step only clears Notas when there's a regeneration reason *and no* news citation, so restoring one without the other would have wiped a news post's citation on retry.
+
+### Kling → Veo 3.1 migration (2026-09-15)
+
+**Trigger:** a reel scheduled for 2026-09-18 (`rec5qRhUeorGMrAtW`) failed at the `video` step with a misleading `HTTP 429` from Kling. The response body was actually `{"code":1102,"message":"Account balance not enough"}` — Kling uses status 429 for both real rate-limiting and an exhausted account balance, so `withRetry` treated a non-recoverable billing problem as transient and retried it uselessly. The Kling account was confirmed unusable going forward, so this was a full replacement, not a dual-provider fallback.
+
+**Provider evaluated and chosen:** Google Veo 3.1 via the Gemini Developer API (`generativelanguage.googleapis.com`), over Runway Gen-4 (no negative-prompt support at all — incompatible with this pipeline's locked-camera/no-artifact prompt discipline) and MiniMax Hailuo 02 (cheapest, but no negative-prompt support either, and shares Kling's reseller/prepaid-balance risk category). Veo 3.1 was the only option with real `negativePrompt` support, matching what `generate-reel.js`'s Kling integration relied on.
+
+**What changed in `generate-reel.js`:** same exported `generateReel(record, ctx)` interface, so `pipeline.js` needed no logic changes beyond comment wording. Internally: `predictLongRunning` + polling instead of Kling's submit/poll pair; `ctx.imageUrl` is now downloaded and embedded as base64 (Veo's image-to-video API takes inline bytes, not a URL Veo fetches server-side like Kling did); `1080p`, `aspectRatio: '9:16'`, `personGeneration: 'allow_adult'` (with an automatic retry without it if a region/account rejects that value — a real risk flagged during evaluation, though it didn't hit this account); same negative-prompt content, ported to Veo's `negativePrompt` parameter. Veo's own file-download URL requires an `x-goog-api-key` header and expires, so `generate-reel.js` downloads and re-uploads to Cloudinary itself before returning — `apply-brand-video.js` and `fetch-guard.js` still only ever see Cloudinary URLs, unchanged from the Kling era. `fetch-guard.js`'s `ALLOWED_DOMAINS` swapped `klingai.com` → `generativelanguage.googleapis.com` for the one new outbound fetch (downloading the Veo clip).
+
+**Known limitation — forced audio:** the `veo-3.1-generate-preview` model generates native audio on every clip with no way to disable it via the raw REST API (`generateAudio: false` is rejected: `"generateAudio isn't supported by this model"`). This doesn't break anything — `apply-brand-video.js`'s FFmpeg mix already discards all source audio via `-map 0:v` and mixes in only `assets/music/`'s own track — but it means every clip is billed at Veo's audio-inclusive rate with no way to opt out on this model. See `docs/SERVICES_AND_COSTS.md` for the resulting cost estimate (~$104/month at 1 reel/week, versus ~$1.20–3.60/month under Kling) — unverified against actual Cloud Console billing as of this migration. Also unresolved: clips default to Veo's 8s duration (no `durationSeconds` override set), even though only the first 5s survives FFmpeg's trim to `SCENE_SECS` — wasted generation time/cost worth revisiting.
+
+**Separate discovery made during this migration — `assets/music/` had no backup:** while verifying the branding pipeline, published reels turned out to have audio despite `assets/music/`'s 27 MP3s being completely absent from local disk with zero git history. The files had only ever reached production via a manual `railway up` CLI upload (which bundles local-disk contents regardless of git tracking) back on 2026-06-19, and the currently-running Railway deployment turned out to be from **2026-07-14** — over two months stale, predating every fix in this file's changelog since then. `backup-airtable.js` never covered this; it only snapshots Airtable records, never local filesystem assets. Recovered by `railway ssh`-ing into that still-live July 14 container and tarring `assets/music/` off it before this migration's redeploy could replace it for good — all 27 files verified intact and committed to git for the first time (`c1783ee`), closing the gap. `findMusicTrack()` in `apply-brand-video.js` also now logs a warning (not just silent `console.log` on success) when no track is found, so a missing-music situation is never silently invisible again.
 
 ---
 
@@ -293,12 +304,14 @@ Both `generate-content.js` (single_photo/reel) and `generate-carousel.js` use `s
 
 ---
 
-## Kling Video Quality Notes
+## Veo Video Quality Notes
 
-- Model: `kling-v2-1`, mode: `pro`, duration: `5s`, `cfg_scale: 0.5`
-- Positive motion prompt includes: *"Realistic human movement, natural physics, high realism, authentic movement, no exaggerated facial expressions. CAMERA FULLY LOCKED."*
-- Negative prompt blocks: warped fingers, facial drift, expression morphing, camera shake, **talking, laughing mouth, dramatic movement, exaggerated expressions, fast motion, animated gestures**
+- Model: `veo-3.1-generate-preview` (Gemini Developer API), `resolution: '1080p'`, `aspectRatio: '9:16'`, `personGeneration: 'allow_adult'` (auto-retries without this param if an account/region rejects it)
+- Positive motion prompt includes: *"Camera fully locked — completely static, no pan, no zoom, no push-in, no handheld movement whatsoever. Realistic human movement, natural physics, high realism, authentic movement, no exaggerated facial expressions."*
+- `negativePrompt` blocks: warped fingers, facial drift, expression morphing, camera shake, **talking, laughing mouth, dramatic movement, exaggerated expressions, fast motion, animated gestures**
 - See `src/generate-reel.js` `motionPrompt()` and `NEGATIVE_PROMPT` constants for full values
+- Clips generate at Veo's default 8s (no explicit `durationSeconds`); `apply-brand-video.js` trims each to `SCENE_SECS` (5s) — see the Kling → Veo migration changelog entry above for the cost implication of not shortening this at generation time
+- Native audio can't be disabled on this model via the REST API — always discarded downstream by `apply-brand-video.js`'s FFmpeg mix, never actually published
 
 ---
 

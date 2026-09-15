@@ -12,7 +12,7 @@ if (!recordId) {
 }
 
 console.log(`Running generation pipeline for record ${recordId}\n`);
-console.log('This will call Claude, Ideogram, and Kling APIs (~$0.15 in API costs).\n');
+console.log('This will call Claude, Ideogram, and Veo APIs (~$0.15+ in API costs).\n');
 
 try {
   const result = await runPipeline(recordId);

@@ -1,7 +1,7 @@
 # GlobeHop Instagram Automation — Services & Billing
 
-**Last updated:** June 2026  
-**Current scope:** Australia only · single_photo + carousel · 4 posts/week · reels paused
+**Last updated:** September 2026  
+**Current scope:** Australia only · single_photo + carousel + reel · 4 posts/week (1 reel/week)
 
 ---
 
@@ -11,7 +11,7 @@
 |---------|------|-------------|-------------|
 | Anthropic (Claude API) | AI captions, hooks, humanization | ~$0.05–0.10 | https://console.anthropic.com/settings/billing |
 | Ideogram API | AI image generation | ~$1.50–2.50 | https://ideogram.ai/manage-plan |
-| Kling AI | AI video / reels *(paused)* | $0 now / ~$1.05 when active | https://klingai.com/pricing |
+| Google Veo 3.1 (Gemini API) | AI video / reels | ~$100–110 (1 reel/week) | https://console.cloud.google.com/billing |
 | Railway | Server hosting | ~$5–10 | https://railway.app/account/billing |
 | Make.com | Scheduler / webhook trigger | Free (under 1,000 ops/mo) | https://www.make.com/en/billing |
 | Airtable | Content calendar + state machine | Free | https://airtable.com/account |
@@ -52,13 +52,17 @@
 
 ---
 
-### 3. Kling AI *(paused — reels not in production)*
-**URL:** https://klingai.com/pricing  
-**API base:** `https://api.klingai.com`  
-**Cost when active:** ~$0.10–0.30 per reel clip  
-**Monthly (4 reels × 3 clips each):** ~$1.20–3.60  
-**Current cost:** $0 — reels are paused.  
-**Recommendation:** Top up $20 before re-enabling reels.
+### 3. Google Veo 3.1 (Gemini Developer API) — replaces Kling AI, migrated Sept 2026
+**URL:** https://console.cloud.google.com/billing (billing must be linked to the AI Studio project — the free tier has zero Veo quota)  
+**API base:** `https://generativelanguage.googleapis.com`  
+**Model:** `veo-3.1-generate-preview`, 1080p, `personGeneration: allow_adult`  
+**Cost per clip:** the flagship preview model forces native audio on with no way to disable it via the REST API, so billing runs at the audio-inclusive rate (~$0.75/sec published) rather than the cheaper video-only tiers — even though this pipeline discards all source audio and always mixes its own `assets/music/` track instead. Each clip defaults to 8s (no `durationSeconds` override set) even though only the first 5s is kept after FFmpeg trims it.  
+**Per clip (8s × ~$0.75/sec):** ~$6.00  
+**Per reel (4 scenes):** ~$24.00  
+**Monthly (1 reel/week ≈ 4.33 reels/month):** ~$104  
+**Not yet verified against actual Cloud Console billing** — these are published-rate estimates from the test run in this migration, not a confirmed invoice.  
+**This is a large cost increase over Kling** (~$1.20–3.60/month previously). Worth a follow-up pass to check whether `veo-3.1-fast-generate-preview` supports disabling audio and/or an explicit shorter `durationSeconds`, both of which would cut this materially.  
+**Recommendation:** verify the real per-request cost in Cloud Console before relying on this at scale; keep a card on file with usage alerts set well below $104/month until confirmed.
 
 ---
 
@@ -111,24 +115,15 @@
 
 ## Monthly Cost Summary
 
-### Current scope (no reels)
+### Current scope (4 posts/week: 3 single_photo/carousel + 1 reel)
 | Item | Cost |
 |------|------|
-| Anthropic Claude API | ~$0.10 |
+| Anthropic Claude API | ~$0.10–0.15 |
 | Ideogram API | ~$1.90 |
+| Google Veo 3.1 (1 reel/week, 4 clips) | ~$104 (unverified — see Veo section) |
 | Railway hosting | ~$5–10 |
 | Everything else | $0 |
-| **Total** | **~$7–12 / month** |
-
-### With reels enabled (16 posts/week incl. 4 reels)
-| Item | Cost |
-|------|------|
-| Anthropic Claude API | ~$0.15 |
-| Ideogram API | ~$3.50 |
-| Kling AI (3 clips/reel) | ~$2.40 |
-| Railway hosting | ~$5–10 |
-| Everything else | $0 |
-| **Total** | **~$11–16 / month** |
+| **Total** | **~$111–116 / month** |
 
 ---
 
@@ -136,9 +131,9 @@
 
 Before the automation can stall due to insufficient funds, check these in order:
 
-- [ ] **Ideogram** — most likely to run out; keep ≥$10 credit
+- [ ] **Google Cloud (Veo 3.1)** — now the largest line item by far; confirm actual per-clip billing in Cloud Console and set a usage alert
+- [ ] **Ideogram** — keep ≥$10 credit
 - [ ] **Railway** — keep a valid payment method on file
 - [ ] **Anthropic** — keep ≥$5 credit
-- [ ] **Kling** — only relevant when reels are re-enabled; load $20 before launch
 
 Make.com, Airtable, Cloudinary, and SendGrid are all free at current volume — no action needed.

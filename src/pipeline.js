@@ -242,14 +242,14 @@ async function runStep(stepName, tipo, record, ctx) {
             return { ...scene, imageUrl: await uploadUrlToCdn(imageUrl) };
           })
         );
-        // Persist the now-permanent CDN URLs immediately, before the Kling loop
+        // Persist the now-permanent CDN URLs immediately, before the video loop
         // below can fail partway through. Keeps "Paso completado" at 'images'
         // (unchanged) so a retry still resumes at 'video' — but ctx.scenes on
         // that retry will carry Cloudinary URLs instead of expired Ideogram
         // ones, so isIdeogramUrlExpired short-circuits and already-regenerated
         // scenes aren't paid for and regenerated a second time.
         await saveStep(record.id, 'images', { 'Slides JSON': JSON.stringify(cdnScenes) });
-        // Generate Kling clips sequentially to stay within API rate limits
+        // Generate Veo clips sequentially to stay within API rate limits
         const videoScenes = [];
         for (const scene of cdnScenes) {
           const result = await generateReel(record, { ...ctx, imageUrl: scene.imageUrl, visual: scene.visual });
@@ -263,9 +263,9 @@ async function runStep(stepName, tipo, record, ctx) {
         return { ...ctx, videoUrl: brandedUrl };
       }
       // Single-scene fallback for legacy records
-      const afterKling = await generateReel(record, ctx);
-      const brandedUrl = await applyBrandToVideo(afterKling.videoUrl, ctx.hook ?? null);
-      return { ...afterKling, videoUrl: brandedUrl };
+      const afterVideo = await generateReel(record, ctx);
+      const brandedUrl = await applyBrandToVideo(afterVideo.videoUrl, ctx.hook ?? null);
+      return { ...afterVideo, videoUrl: brandedUrl };
     }
 
     case 'save':
@@ -280,8 +280,8 @@ async function runStep(stepName, tipo, record, ctx) {
 
 async function brandSingle(ctx, tipo) {
   if (tipo === 'reel') {
-    // Send a CLEAN image to Kling — no Sharp overlays. Text/logo are applied
-    // via FFmpeg after the video is generated so Kling never distorts the branding.
+    // Send a CLEAN image to Veo — no Sharp overlays. Text/logo are applied
+    // via FFmpeg after the video is generated so Veo never distorts the branding.
     const cdnUrl = await uploadUrlToCdn(ctx.imageUrl);
     return { ...ctx, imageUrl: cdnUrl };
   }

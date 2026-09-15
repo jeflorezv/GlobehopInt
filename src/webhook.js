@@ -22,7 +22,7 @@ import { formatRegenerationNote, validateRejectionReason } from './utils/regener
 
 const REQUIRED_ENV = [
   'ANTHROPIC_API_KEY', 'IDEOGRAM_API_KEY',
-  'KLING_API_KEY', 'KLING_API_SECRET',
+  'GEMINI_API_KEY',
   'AIRTABLE_API_KEY', 'AIRTABLE_BASE_ID',
   'INSTAGRAM_ACCOUNT_ID', 'INSTAGRAM_SYSTEM_USER_TOKEN',
   'WEBHOOK_SECRET', 'RAILWAY_PUBLIC_URL',
@@ -192,7 +192,7 @@ app.post('/generate', requireSecret, apiLimiter, (req, res) => {
   }
 
   // Respond immediately — Railway's reverse proxy times out long-running HTTP connections
-  // (Kling video generation can take 3–5 min). Pipeline continues in the background;
+  // (Veo video generation can take a few minutes per scene). Pipeline continues in the background;
   // result is tracked via Airtable Estado field.
   res.json({ accepted: true, recordId });
 

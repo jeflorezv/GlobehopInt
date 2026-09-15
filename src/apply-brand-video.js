@@ -10,12 +10,12 @@ import { assertAllowedUrl } from './utils/fetch-guard.js';
 const execFileAsync = promisify(execFile);
 const TARGET_W      = 1080;
 const TARGET_H      = 1920;
-const SCENE_SECS    = 5;     // use full Kling clip — 4 scenes × 5s = 20s total reel
+const SCENE_SECS    = 5;     // trim each generated clip to 5s — 4 scenes × 5s = 20s total reel
 const MUSIC_DIR     = path.resolve('./assets/music');
 const MUSIC_VOLUME  = 0.15;  // 15% — music sits under any future voiceover
 
 /**
- * Post-processes Kling video(s) with GlobeHop branding and uploads to Cloudinary.
+ * Post-processes generated video(s) with GlobeHop branding and uploads to Cloudinary.
  *
  * Single URL  → single-scene mode (legacy/fallback): hook overlay applied.
  * Array of URLs → multi-scene mode: per-scene overlays, optional music track.
@@ -26,7 +26,7 @@ const MUSIC_VOLUME  = 0.15;  // 15% — music sits under any future voiceover
  * Music: if assets/music/ contains any .mp3/.m4a/.aac file, it is looped and
  * mixed in at MUSIC_VOLUME. No file → silent output.
  *
- * @param {string|string[]} videoUrls  Raw Kling video URL(s)
+ * @param {string|string[]} videoUrls  Raw generated video URL(s)
  * @param {string|null}     hookText   3-line hook (\n-separated) for scene 1
  * @param {object[]|null}   scenes     Scene descriptors with .text fields
  * @returns {Promise<string>} Cloudinary URL of the final branded video
@@ -41,14 +41,14 @@ export async function applyBrandToVideo(videoUrls, hookText = null, scenes = nul
 // ─── single-scene (original flow, kept for compatibility) ─────────────────────
 
 async function assembleSingleScene(videoUrl, hookText) {
-  const rawPath    = path.join('/tmp', `kling-${randomUUID()}.mp4`);
+  const rawPath    = path.join('/tmp', `video-${randomUUID()}.mp4`);
   const outPath    = path.join('/tmp', `branded-${randomUUID()}.mp4`);
   let overlayPath  = null;
 
   try {
     assertAllowedUrl(videoUrl, 'apply-brand-video');
     const resp = await fetch(videoUrl);
-    if (!resp.ok) throw new Error(`Failed to fetch Kling video: ${resp.status} ${videoUrl}`);
+    if (!resp.ok) throw new Error(`Failed to fetch video: ${resp.status} ${videoUrl}`);
     await writeFile(rawPath, Buffer.from(await resp.arrayBuffer()));
 
     overlayPath = await createOverlayPng(TARGET_W, TARGET_H, hookText);
@@ -89,7 +89,7 @@ async function assembleSingleScene(videoUrl, hookText) {
 
 async function assembleMultiScene(videoUrls, hookText, scenes) {
   const id             = randomUUID();
-  const rawPaths       = videoUrls.map((_, i) => path.join('/tmp', `kling-${id}-${i}.mp4`));
+  const rawPaths       = videoUrls.map((_, i) => path.join('/tmp', `video-${id}-${i}.mp4`));
   const processedPaths = videoUrls.map((_, i) => path.join('/tmp', `scene-${id}-${i}.mp4`));
   const concatList     = path.join('/tmp', `concat-${id}.txt`);
   const outPath        = path.join('/tmp', `final-${id}.mp4`);
@@ -97,11 +97,11 @@ async function assembleMultiScene(videoUrls, hookText, scenes) {
   const toClean        = [...rawPaths, ...processedPaths, concatList, outPath];
 
   try {
-    // 1. Download all Kling clips in parallel
+    // 1. Download all generated clips in parallel
     await Promise.all(videoUrls.map(async (url, i) => {
       assertAllowedUrl(url, 'apply-brand-video');
       const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`Failed to fetch Kling clip ${i + 1}: ${resp.status}`);
+      if (!resp.ok) throw new Error(`Failed to fetch clip ${i + 1}: ${resp.status}`);
       await writeFile(rawPaths[i], Buffer.from(await resp.arrayBuffer()));
     }));
 
@@ -188,11 +188,15 @@ async function findMusicTrack() {
   try {
     const files  = await readdir(MUSIC_DIR);
     const tracks = files.filter(f => /\.(mp3|m4a|aac)$/i.test(f));
-    if (!tracks.length) return null;
+    if (!tracks.length) {
+      console.warn(`[brand-video] WARNING: no music tracks found in ${MUSIC_DIR} — publishing SILENT video`);
+      return null;
+    }
     const pick = tracks[Math.floor(Math.random() * tracks.length)];
     console.log(`[brand-video] music track: ${pick}`);
     return path.join(MUSIC_DIR, pick);
-  } catch {
+  } catch (err) {
+    console.warn(`[brand-video] WARNING: could not read ${MUSIC_DIR} (${err.message}) — publishing SILENT video`);
     return null;
   }
 }

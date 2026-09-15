@@ -1,14 +1,18 @@
-import { createHmac } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import { writeFile, unlink } from 'node:fs/promises';
 import { withRetry } from './utils/retry.js';
+import { assertAllowedUrl } from './utils/fetch-guard.js';
+import { uploadVideoToCdn } from './upload-cdn.js';
 
-if (!process.env.KLING_API_KEY || !process.env.KLING_API_SECRET) {
-  throw new Error('[generate-reel] KLING_API_KEY and KLING_API_SECRET must be set in environment');
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error('[generate-reel] GEMINI_API_KEY must be set in environment');
 }
 
-const BASE_URL             = process.env.KLING_API_BASE_URL ?? 'https://api.klingai.com';
-const POLL_INTERVAL_MS     = 15_000;
-const MAX_POLLS            = 32; // ~8 min — covers kling-v2-1/pro render times
-export const KNOWN_NON_TERMINAL = new Set(['submitted', 'processing']);
+const API_KEY           = process.env.GEMINI_API_KEY;
+const MODEL              = 'veo-3.1-generate-preview';
+const API_BASE           = 'https://generativelanguage.googleapis.com/v1beta';
+const POLL_INTERVAL_MS   = 10_000;
+const MAX_POLLS          = 40; // ~6.7 min — comfortably covers observed 70–110s Veo render times
 
 const NEGATIVE_PROMPT =
   'warped or fused fingers, extra or missing fingers, floating limbs, phantom limbs, disembodied arm, ' +
@@ -18,27 +22,15 @@ const NEGATIVE_PROMPT =
   'talking, laughing mouth, mouth opening, dramatic movement, exaggerated expressions, ' +
   'fast motion, animated gestures, big smile morphing, speaking to camera';
 
-function klingJwt() {
-  const header  = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const now     = Math.floor(Date.now() / 1000);
-  const payload = Buffer.from(JSON.stringify({
-    iss: process.env.KLING_API_KEY,
-    exp: now + 1800,
-    nbf: now - 30,
-  })).toString('base64url');
-  const sig = createHmac('sha256', process.env.KLING_API_SECRET)
-    .update(`${header}.${payload}`)
-    .digest('base64url');
-  return `${header}.${payload}.${sig}`;
-}
-
 /**
- * Submits an image-to-video task to Kling and polls until the video is ready.
- * Called as the `video` step in the reel pipeline. Receives a CDN-hosted clean
- * image (no Sharp overlays) — branding (logo, text, music) is applied by FFmpeg
- * in applyBrandToVideo after this function returns.
+ * Submits an image-to-video task to Veo 3.1 and polls until the video is ready,
+ * then persists it to Cloudinary (Veo's own file URLs require an auth header
+ * and expire, so downstream steps — apply-brand-video.js — must never see them).
+ * Called as the `video` step in the reel pipeline.
  *
- * ctx.imageUrl must be a publicly reachable CDN URL because Kling downloads it server-side.
+ * ctx.imageUrl must be a publicly reachable CDN URL — this function downloads
+ * it to embed as base64 (Veo's image-to-video API takes inline image bytes,
+ * not a URL Veo fetches server-side, unlike the previous Kling integration).
  *
  * @param {object} record  Airtable record — unused here; accepted for pipeline step interface consistency
  * @param {object} ctx     Pipeline context — must contain ctx.imageUrl and ctx.visual
@@ -48,106 +40,128 @@ export async function generateReel(record, ctx) {
   if (!ctx.imageUrl) throw new Error('generate-reel: ctx.imageUrl is required');
   if (!ctx.visual)   throw new Error('generate-reel: ctx.visual is required');
 
-  const taskId  = await submitTask(ctx.imageUrl, ctx.visual);
-  const videoUrl = await pollUntilDone(taskId);
+  const imageBytes = await fetchImageAsBase64(ctx.imageUrl);
+  const operationName = await submitTask(imageBytes, motionPrompt(ctx.visual));
+  const veoVideoUri = await pollUntilDone(operationName);
+  const videoUrl = await persistToCdn(veoVideoUri);
 
   return { ...ctx, videoUrl };
 }
 
-async function submitTask(imageUrl, visualPrompt) {
+async function fetchImageAsBase64(imageUrl) {
+  assertAllowedUrl(imageUrl, 'generate-reel');
+  const resp = await fetch(imageUrl);
+  if (!resp.ok) throw new Error(`generate-reel: failed to fetch source image (HTTP ${resp.status})`);
+  return Buffer.from(await resp.arrayBuffer()).toString('base64');
+}
+
+async function submitTask(imageBytes, prompt, personGeneration = 'allow_adult') {
   return withRetry(async () => {
-    const resp = await fetch(`${BASE_URL}/v1/videos/image2video`, {
+    const parameters = {
+      aspectRatio: '9:16',
+      negativePrompt: NEGATIVE_PROMPT,
+      resolution: '1080p',
+    };
+    if (personGeneration) parameters.personGeneration = personGeneration;
+
+    const resp = await fetch(`${API_BASE}/models/${MODEL}:predictLongRunning`, {
       method: 'POST',
       signal:  AbortSignal.timeout(30_000),
       headers: {
-        Authorization:  `Bearer ${klingJwt()}`,
-        'Content-Type': 'application/json',
+        'x-goog-api-key': API_KEY,
+        'Content-Type':   'application/json',
       },
       body: JSON.stringify({
-        model_name:      'kling-v2-1',
-        image:           imageUrl,
-        prompt:          motionPrompt(visualPrompt),
-        negative_prompt: NEGATIVE_PROMPT,
-        duration:        '5',
-        mode:            'pro',
-        cfg_scale:       0.5,
-        // aspect_ratio is inferred from the source image — Ideogram already
-        // outputs ASPECT_9_16 for reels, so no explicit param is needed here.
+        instances: [{ prompt, image: { bytesBase64Encoded: imageBytes, mimeType: 'image/png' } }],
+        parameters,
       }),
     });
 
+    const json = await resp.json();
+
     if (!resp.ok) {
-      const body = await resp.text();
-      console.error(`[generate-reel] Kling submit ${resp.status} body:`, body);
-      const err  = new Error(`Kling submit failed (HTTP ${resp.status})`);
+      // Some accounts/regions reject personGeneration:'allow_adult' outright —
+      // retry once with the model default rather than failing the whole scene.
+      if (personGeneration && String(json?.error?.message).includes('personGeneration')) {
+        console.warn('[generate-reel] personGeneration:allow_adult rejected, retrying without it');
+        return submitTask(imageBytes, prompt, null);
+      }
+      console.error(`[generate-reel] Veo submit ${resp.status} body:`, JSON.stringify(json));
+      const err  = new Error(`Veo submit failed (HTTP ${resp.status}): ${json?.error?.message ?? 'unknown error'}`);
       err.status = resp.status;
       throw err;
     }
 
-    const json   = await resp.json();
-    const taskId = json?.data?.task_id;
-    if (!taskId) throw new Error('Kling: no task_id in submit response (check Railway logs)');
-    return taskId;
+    if (!json.name) throw new Error('Veo: no operation name in submit response (check Railway logs)');
+    return json.name;
   });
 }
 
-async function pollUntilDone(taskId) {
+async function pollUntilDone(operationName) {
+  const url = `${API_BASE}/${operationName}`;
+
   for (let attempt = 1; attempt <= MAX_POLLS; attempt++) {
     await sleep(POLL_INTERVAL_MS);
 
     const json = await withRetry(async () => {
-      const resp = await fetch(`${BASE_URL}/v1/videos/image2video/${taskId}`, {
+      const resp = await fetch(url, {
         signal:  AbortSignal.timeout(20_000),
-        headers: { Authorization: `Bearer ${klingJwt()}` },
+        headers: { 'x-goog-api-key': API_KEY },
       });
 
+      const body = await resp.json();
       if (!resp.ok) {
-        const body = await resp.text();
-        console.error(`[generate-reel] Kling poll ${resp.status} body:`, body);
-        const err  = new Error(`Kling poll failed (HTTP ${resp.status})`);
+        console.error(`[generate-reel] Veo poll ${resp.status} body:`, JSON.stringify(body));
+        const err  = new Error(`Veo poll failed (HTTP ${resp.status})`);
         err.status = resp.status;
         throw err;
       }
-
-      return resp.json();
+      return body;
     });
 
-    const status   = json?.data?.task_status;
-    const videoUrl = json?.data?.task_result?.videos?.[0]?.url;
+    if (json.error) {
+      console.error(`[generate-reel] Veo operation ${operationName} failed:`, JSON.stringify(json.error));
+      throw new Error(`Veo: operation failed — ${json.error.message ?? 'unknown error'}`);
+    }
 
-    if (status === 'succeed') {
-      if (!videoUrl) {
-        console.error(`[generate-reel] Kling task ${taskId} succeeded but returned no video URL:`, JSON.stringify(json?.data));
-        throw new Error(`Kling: task ${taskId} succeeded but response contained no video URL`);
+    if (json.done) {
+      const videoUri = json?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
+      if (!videoUri) {
+        console.error(`[generate-reel] Veo operation ${operationName} done but no video URI:`, JSON.stringify(json.response));
+        throw new Error(`Veo: operation ${operationName} completed but response contained no video URI`);
       }
-      return videoUrl;
+      return videoUri;
     }
 
-    if (status === 'failed') {
-      console.error(`[generate-reel] Kling task ${taskId} failed:`, JSON.stringify(json?.data));
-      throw new Error(`Kling: task ${taskId} failed (check Railway logs)`);
-    }
-
-    if (!KNOWN_NON_TERMINAL.has(status)) {
-      console.error(`[generate-reel] Kling task ${taskId} unknown status "${status}":`, JSON.stringify(json?.data));
-      throw new Error(`Kling: task ${taskId} returned unrecognized status "${status}"`);
-    }
-
-    // known non-terminal status — continue polling
+    // done: false — keep polling
   }
 
   const elapsed = (MAX_POLLS * POLL_INTERVAL_MS) / 1000;
-  throw new Error(`Kling: task ${taskId} timed out after ${elapsed}s`);
+  throw new Error(`Veo: operation ${operationName} timed out after ${elapsed}s`);
 }
 
-// Derives a Kling motion prompt from the static image.
+async function persistToCdn(veoVideoUri) {
+  assertAllowedUrl(veoVideoUri, 'generate-reel');
+  const resp = await fetch(veoVideoUri, { headers: { 'x-goog-api-key': API_KEY } });
+  if (!resp.ok) throw new Error(`generate-reel: failed to download Veo clip (HTTP ${resp.status})`);
+
+  const tmpPath = `/tmp/veo-${randomUUID()}.mp4`;
+  try {
+    await writeFile(tmpPath, Buffer.from(await resp.arrayBuffer()));
+    return await uploadVideoToCdn(tmpPath, `veo-${randomUUID()}.mp4`);
+  } finally {
+    unlink(tmpPath).catch(() => {});
+  }
+}
+
+// Derives a Veo motion prompt from the static image.
 // CAMERA LOCKED = prevents background morph artifacts.
 // Hands/fingers explicit = prevents finger-fusion blobs.
 // No facial movement = prevents face drift and expression morphing.
 function motionPrompt(visualPrompt) {
   return (
     `${visualPrompt} ` +
-    'CAMERA FULLY LOCKED — absolutely no pan, no zoom, no push-in, no camera movement whatsoever. ' +
+    'Camera fully locked — completely static, no pan, no zoom, no push-in, no handheld movement whatsoever. ' +
     'Realistic human movement, natural physics, high realism, authentic movement, no exaggerated facial expressions. ' +
     'Micro motion only on the subject: subtle breathing, gentle natural blink, very slight hair movement from a soft breeze. ' +
     'Hands completely still and relaxed — no gesturing, no gripping, fingers not animated. ' +

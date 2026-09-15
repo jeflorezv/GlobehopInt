@@ -2,7 +2,7 @@
 // Subdomain matching is applied: 'ideogram.ai' covers api.ideogram.ai, cdn.ideogram.ai, etc.
 const ALLOWED_DOMAINS = [
   'ideogram.ai',
-  'klingai.com',
+  'generativelanguage.googleapis.com',
   'cloudinary.com',
 ];
 

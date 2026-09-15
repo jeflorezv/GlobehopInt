@@ -63,7 +63,7 @@ export async function uploadToCdn(filePath, filename) {
 
 /**
  * Uploads a remote image URL to Cloudinary (Cloudinary fetches it server-side).
- * Used to give Kling a permanent, non-expiring source image URL.
+ * Used to give the video generation step a permanent, non-expiring source image URL.
  *
  * @param {string} sourceUrl  Public URL of the image to fetch and store
  * @returns {Promise<string>}

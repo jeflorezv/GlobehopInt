@@ -18,7 +18,7 @@ const FONT_ABS = path.resolve(FONT_PATH);
 /**
  * Generates a transparent RGBA PNG overlay (gradient + text + logo) sized to
  * match a video frame. Intended for FFmpeg post-processing — composited AFTER
- * Kling generates the video so the AI never sees or distorts the branding.
+ * Veo generates the video so the AI never sees or distorts the branding.
  *
  * @param {number} width     Video frame width
  * @param {number} height    Video frame height
@@ -78,7 +78,7 @@ export async function applyBrand(imageUrl, hookText = null, isReel = false) {
   const tmpPath  = path.join('/tmp', filename);
 
   if (isReel) {
-    // Keep native 9:16 — Kling inherits the input image dimensions
+    // Keep native 9:16 — Veo inherits the input image dimensions
     await sharp(compositedBuf)
       .jpeg({ quality: 90 })
       .toFile(tmpPath);

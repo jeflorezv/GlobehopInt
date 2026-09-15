@@ -15,7 +15,7 @@ Step lists per post type:
 ```
 single_photo:  caption → humanize → image → brand → save
 carousel:      caption → humanize → render → save          # render = Puppeteer HTML/CSS → 6 PNG slides → Cloudinary
-reel:          caption → humanize → images → video → save  # images (plural) = 4 parallel Ideogram calls; no brand step (overlays applied by FFmpeg post-Kling)
+reel:          caption → humanize → images → video → save  # images (plural) = 4 parallel Ideogram calls; no brand step (overlays applied by FFmpeg post-video-generation)
 ```
 
 Skip logic: if `record['Estado'] === 'Omitir'`, return `{ skipped: true }` before executing any steps.
@@ -81,7 +81,7 @@ Guard rule: `/publish` endpoint verifies `Estado === 'Aprobado'` before calling 
 
 Signature: `withRetry(fn, { retries = 3, delay = 1000, multiplier = 2 })`.
 
-All external calls — Claude, Ideogram, Kling, Instagram Graph API, SendGrid — wrap their `fetch`/SDK call in `withRetry`. The wrapper retries on 429 and 5xx; it rethrows immediately on 4xx (except 429) since those indicate caller errors that a retry won't fix.
+All external calls — Claude, Ideogram, Veo, Instagram Graph API, SendGrid — wrap their `fetch`/SDK call in `withRetry`. The wrapper retries on 429 and 5xx; it rethrows immediately on 4xx (except 429) since those indicate caller errors that a retry won't fix. Note: Veo's own API returns 429 for real rate-limiting, so this pattern is sound there — it was Kling's overloading of 429 for account-balance errors that made this pattern misfire (see the Kling → Veo migration entry in CLAUDE.md).
 
 ---
 
@@ -106,9 +106,9 @@ One module = one external API or one infrastructure concern. No module imports a
 | `generate-image.js` | Ideogram API — single image per call (used for single_photo and each reel scene) |
 | `generate-carousel.js` | Claude API — selects one of 20 templates, generates 6-slide structured JSON content |
 | `render-carousel.js`   | Puppeteer — renders each slide as 1080×1080 HTML/CSS to PNG, uploads all 6 to Cloudinary |
-| `generate-reel.js` | Kling API — image-to-video (async submit + poll), cfg_scale 0.3, std mode |
+| `generate-reel.js` | Veo 3.1 API — image-to-video (async submit + poll), 1080p, personGeneration: allow_adult |
 | `apply-brand.js` | Sharp — logo overlay + 3-level gradient/text hook for single_photo |
-| `apply-brand-video.js` | FFmpeg — trims Kling clips to 2.5s, applies per-scene overlays via `movie` filter loop, concat, optional music mix at 15% volume |
+| `apply-brand-video.js` | FFmpeg — trims generated clips to 5s, applies per-scene overlays via `movie` filter loop, concat, optional music mix at 15% volume |
 | `upload-cdn.js` | Cloudinary — permanent storage for videos and branded images |
 | `save-to-airtable.js` | Airtable REST — per-step field writes + Estado state machine |
 | `post-to-instagram.js` | Instagram Graph API — photo + carousel publish |
@@ -119,9 +119,9 @@ One module = one external API or one infrastructure concern. No module imports a
 
 ## 8. Async Polling Pattern
 
-**Where:** `src/generate-reel.js` (Kling), `src/post-reel.js` (Instagram reel status).
+**Where:** `src/generate-reel.js` (Veo), `src/post-reel.js` (Instagram reel status).
 
-Both Kling video generation and Instagram reel processing are async — the submission returns a task/creation ID, and completion must be polled. Both use the same structure: submit → poll loop with fixed interval and max attempt cap → throw on timeout or failure.
+Both Veo video generation and Instagram reel processing are async — the submission returns an operation/creation ID, and completion must be polled. Both use the same structure: submit → poll loop with fixed interval and max attempt cap → throw on timeout or failure.
 
-- Kling: 15s interval, 20 attempts (5-minute window per clip × 4 clips = up to 20 min total)
+- Veo: 10s interval, 40 attempts (~6.7-minute window per clip × 4 clips sequentially)
 - Instagram reel: 10s interval, 18 attempts (3-minute window)
