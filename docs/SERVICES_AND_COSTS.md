@@ -11,7 +11,7 @@
 |---------|------|-------------|-------------|
 | Anthropic (Claude API) | AI captions, hooks, humanization | ~$0.05–0.10 | https://console.anthropic.com/settings/billing |
 | Ideogram API | AI image generation | ~$1.50–2.50 | https://ideogram.ai/manage-plan |
-| Google Veo 3.1 (Gemini API) | AI video / reels | ~$100–110 (1 reel/week) | https://console.cloud.google.com/billing |
+| Google Veo 3.1 (Gemini API) | AI video / reels | ~A$77/month (1 reel/week) — verified against real billing | https://console.cloud.google.com/billing |
 | Railway | Server hosting | ~$5–10 | https://railway.app/account/billing |
 | Make.com | Scheduler / webhook trigger | Free (under 1,000 ops/mo) | https://www.make.com/en/billing |
 | Airtable | Content calendar + state machine | Free | https://airtable.com/account |
@@ -56,13 +56,12 @@
 **URL:** https://console.cloud.google.com/billing (billing must be linked to the AI Studio project — the free tier has zero Veo quota)  
 **API base:** `https://generativelanguage.googleapis.com`  
 **Model:** `veo-3.1-generate-preview`, 1080p, `personGeneration: allow_adult`  
-**Cost per clip:** the flagship preview model forces native audio on with no way to disable it via the REST API, so billing runs at the audio-inclusive rate (~$0.75/sec published) rather than the cheaper video-only tiers — even though this pipeline discards all source audio and always mixes its own `assets/music/` track instead. Each clip defaults to 8s (no `durationSeconds` override set) even though only the first 5s is kept after FFmpeg trims it.  
-**Per clip (8s × ~$0.75/sec):** ~$6.00  
-**Per reel (4 scenes):** ~$24.00  
-**Monthly (1 reel/week ≈ 4.33 reels/month):** ~$104  
-**Not yet verified against actual Cloud Console billing** — these are published-rate estimates from the test run in this migration, not a confirmed invoice.  
-**This is a large cost increase over Kling** (~$1.20–3.60/month previously). Worth a follow-up pass to check whether `veo-3.1-fast-generate-preview` supports disabling audio and/or an explicit shorter `durationSeconds`, both of which would cut this materially.  
-**Recommendation:** verify the real per-request cost in Cloud Console before relying on this at scale; keep a card on file with usage alerts set well below $104/month until confirmed.
+**Cost per clip — verified 2026-09-16 against actual Cloud Console billing** (SKU-level, "My Billing Account", AUD): `Veo Generation 1080p with Audio` and `Veo Generation 720p with Audio` both billed identically at **A$4.45 per 8-second clip** (A$0.556/sec) — resolution does not affect price on this account, only the forced-audio tier does. The flagship preview model has no way to disable native audio via the REST API, so every clip bills at this audio-inclusive rate even though this pipeline discards all source audio and always mixes its own `assets/music/` track instead. Each clip defaults to 8s (no `durationSeconds` override set) even though only the first 5s is kept after FFmpeg trims it — so ~3 of every 8 billed seconds are thrown away.  
+**Per clip:** A$4.45  
+**Per reel (4 scenes):** A$17.80  
+**Monthly (1 reel/week ≈ 4.33 reels/month):** ~A$77  
+**This is still a real cost increase over Kling** (~$1.20–3.60/month previously), but roughly 26% below the earlier published-rate estimate (~$104) from before real billing data existed.  
+**Recommendation:** since 1080p costs nothing extra over 720p here, keep 1080p. The real lever is duration — if Veo can be constrained to a shorter explicit `durationSeconds` (5s instead of the 8s default), that alone would cut this to roughly A$48/month. Worth testing before the next optimization pass.
 
 ---
 
@@ -120,10 +119,10 @@
 |------|------|
 | Anthropic Claude API | ~$0.10–0.15 |
 | Ideogram API | ~$1.90 |
-| Google Veo 3.1 (1 reel/week, 4 clips) | ~$104 (unverified — see Veo section) |
+| Google Veo 3.1 (1 reel/week, 4 clips) | ~A$77 (verified against billing 2026-09-16) |
 | Railway hosting | ~$5–10 |
 | Everything else | $0 |
-| **Total** | **~$111–116 / month** |
+| **Total** | **~A$84–89 / month** (Anthropic/Ideogram/Railway lines are USD; Veo is the AUD-denominated billing account's own currency — treat this total as approximate until currency-normalized) |
 
 ---
 
@@ -131,7 +130,7 @@
 
 Before the automation can stall due to insufficient funds, check these in order:
 
-- [ ] **Google Cloud (Veo 3.1)** — now the largest line item by far; confirm actual per-clip billing in Cloud Console and set a usage alert
+- [ ] **Google Cloud (Veo 3.1)** — now the largest line item by far (~A$77/month verified 2026-09-16); set a usage alert in Cloud Console
 - [ ] **Ideogram** — keep ≥$10 credit
 - [ ] **Railway** — keep a valid payment method on file
 - [ ] **Anthropic** — keep ≥$5 credit
