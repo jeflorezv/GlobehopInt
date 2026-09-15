@@ -56,6 +56,34 @@ export async function sendBackupFailureAlert({ error }) {
   });
 }
 
+/**
+ * Sends a confirmation after a successful monthly repo backup (Airtable
+ * snapshot committed to git + any newly-tracked local assets).
+ * Called by monthly-backup.js on success.
+ *
+ * @param {{ recordCount: number, cloudinaryUrl: string, commitSha: string|null, newlyTrackedFiles: string[], flaggedFiles: string[] }} opts
+ */
+export async function sendMonthlyBackupConfirmation({ recordCount, cloudinaryUrl, commitSha, newlyTrackedFiles, flaggedFiles }) {
+  await sendEmail({
+    subject: `🗄️ GlobeHop Instagram — Backup mensual completado (${recordCount} registros)`,
+    html: monthlyBackupHtml({ recordCount, cloudinaryUrl, commitSha, newlyTrackedFiles, flaggedFiles }),
+  });
+}
+
+/**
+ * Sends an alert when the scheduled monthly repo backup fails.
+ * Called by monthly-backup.js on failure.
+ *
+ * @param {{ error: Error|string }} opts
+ */
+export async function sendMonthlyBackupFailureAlert({ error }) {
+  const message = error instanceof Error ? error.message : String(error);
+  await sendEmail({
+    subject: `⚠️ GlobeHop Instagram — Falló el backup mensual`,
+    html: backupFailureHtml({ message }),
+  });
+}
+
 // ─── internal ─────────────────────────────────────────────────────────────────
 
 async function sendEmail({ subject, html }) {
@@ -136,6 +164,32 @@ function backupHtml({ recordCount, url }) {
     <tr><td style="padding:8px;color:#666;vertical-align:top">Archivo</td>
         <td style="padding:8px"><a href="${esc(url)}">${esc(url)}</a></td></tr>
   </table>
+  <p style="margin-top:32px;font-size:12px;color:#999">GlobeHop Instagram Automation · Este mensaje es automático</p>
+</body></html>`;
+}
+
+function monthlyBackupHtml({ recordCount, cloudinaryUrl, commitSha, newlyTrackedFiles, flaggedFiles }) {
+  const newlyTrackedRow = newlyTrackedFiles.length
+    ? `<tr><td style="padding:8px;color:#666;vertical-align:top">Archivos nuevos<br>añadidos al repo</td>
+        <td style="padding:8px;font-family:monospace">${newlyTrackedFiles.map(esc).join('<br>')}</td></tr>`
+    : '';
+  const flaggedRow = flaggedFiles.length
+    ? `<tr><td style="padding:8px;color:#CF202C;vertical-align:top">⚠️ Revisar manualmente</td>
+        <td style="padding:8px;font-family:monospace;color:#CF202C">${flaggedFiles.map(esc).join('<br>')}</td></tr>`
+    : '';
+  return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+  <h2 style="color:#67BB97">🗄️ Backup mensual completado</h2>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+    <tr><td style="padding:8px;color:#666;width:180px">Registros de Airtable</td>
+        <td style="padding:8px;font-weight:bold">${esc(String(recordCount))}</td></tr>
+    <tr><td style="padding:8px;color:#666;vertical-align:top">Copia en Cloudinary</td>
+        <td style="padding:8px"><a href="${esc(cloudinaryUrl)}">${esc(cloudinaryUrl)}</a></td></tr>
+    <tr><td style="padding:8px;color:#666">Commit en GitHub</td>
+        <td style="padding:8px;font-family:monospace">${commitSha ? esc(commitSha) : '(sin cambios que confirmar)'}</td></tr>
+    ${newlyTrackedRow}
+    ${flaggedRow}
+  </table>
+  <p style="margin-bottom:24px">Este backup mensual también revisa el directorio del proyecto en busca de archivos que existan solo en disco local y nunca se hayan subido a git — el mismo problema que causó la pérdida de <code>assets/music/</code> en septiembre de 2026.</p>
   <p style="margin-top:32px;font-size:12px;color:#999">GlobeHop Instagram Automation · Este mensaje es automático</p>
 </body></html>`;
 }

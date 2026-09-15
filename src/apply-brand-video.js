@@ -10,7 +10,7 @@ import { assertAllowedUrl } from './utils/fetch-guard.js';
 const execFileAsync = promisify(execFile);
 const TARGET_W      = 1080;
 const TARGET_H      = 1920;
-const SCENE_SECS    = 5;     // trim each generated clip to 5s — 4 scenes × 5s = 20s total reel
+const SCENE_SECS    = 4;     // matches generate-reel.js DURATION_SECONDS (720p cost fix) — 4 scenes × 4s = 16s total reel
 const MUSIC_DIR     = path.resolve('./assets/music');
 const MUSIC_VOLUME  = 0.15;  // 15% — music sits under any future voiceover
 

@@ -13,6 +13,17 @@ const MODEL              = 'veo-3.1-generate-preview';
 const API_BASE           = 'https://generativelanguage.googleapis.com/v1beta';
 const POLL_INTERVAL_MS   = 10_000;
 const MAX_POLLS          = 40; // ~6.7 min — comfortably covers observed 70–110s Veo render times
+// Veo bills per second, identically regardless of resolution (verified against real
+// Cloud Console billing: 720p and 1080p both A$4.45 per 8s clip) — the cost lever is
+// duration, not resolution. But duration is itself resolution-gated: confirmed live
+// against the API that 1080p only accepts durationSeconds:8 (its default), while 720p
+// accepts 4 (odd values like 5 are rejected at any resolution — only even values
+// validate). So 720p is the only way to get a shorter, cheaper clip at all — this
+// roughly halves cost (~A$77/mo -> ~A$38/mo at 1 reel/week) at the cost of resolution
+// AND total reel length (4 scenes x 4s = 16s instead of 20s; see apply-brand-video.js
+// SCENE_SECS, which must match this value).
+const RESOLUTION          = '720p';
+const DURATION_SECONDS    = 4;
 
 const NEGATIVE_PROMPT =
   'warped or fused fingers, extra or missing fingers, floating limbs, phantom limbs, disembodied arm, ' +
@@ -55,14 +66,15 @@ async function fetchImageAsBase64(imageUrl) {
   return Buffer.from(await resp.arrayBuffer()).toString('base64');
 }
 
-async function submitTask(imageBytes, prompt, personGeneration = 'allow_adult') {
+async function submitTask(imageBytes, prompt, personGeneration = 'allow_adult', durationSeconds = DURATION_SECONDS) {
   return withRetry(async () => {
     const parameters = {
       aspectRatio: '9:16',
       negativePrompt: NEGATIVE_PROMPT,
-      resolution: '1080p',
+      resolution: RESOLUTION,
     };
     if (personGeneration) parameters.personGeneration = personGeneration;
+    if (durationSeconds)  parameters.durationSeconds = durationSeconds;
 
     const resp = await fetch(`${API_BASE}/models/${MODEL}:predictLongRunning`, {
       method: 'POST',
@@ -84,7 +96,14 @@ async function submitTask(imageBytes, prompt, personGeneration = 'allow_adult') 
       // retry once with the model default rather than failing the whole scene.
       if (personGeneration && String(json?.error?.message).includes('personGeneration')) {
         console.warn('[generate-reel] personGeneration:allow_adult rejected, retrying without it');
-        return submitTask(imageBytes, prompt, null);
+        return submitTask(imageBytes, prompt, null, durationSeconds);
+      }
+      // Veo may only support enumerated durations (e.g. 4/6/8s) rather than an
+      // arbitrary 5 — fall back to the model default (8s) rather than fail the scene.
+      // This costs more (see generate-reel.js DURATION_SECONDS comment) but still works.
+      if (durationSeconds && String(json?.error?.message).toLowerCase().includes('duration')) {
+        console.warn(`[generate-reel] durationSeconds:${durationSeconds} rejected, retrying with model default`);
+        return submitTask(imageBytes, prompt, personGeneration, null);
       }
       console.error(`[generate-reel] Veo submit ${resp.status} body:`, JSON.stringify(json));
       const err  = new Error(`Veo submit failed (HTTP ${resp.status}): ${json?.error?.message ?? 'unknown error'}`);
